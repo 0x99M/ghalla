@@ -30,6 +30,7 @@ import {
   REVERSAL_REASONS,
   SHIPMENT_DIRECTIONS,
   SHIPMENT_STATUSES,
+  WEBHOOK_EVENT_STATUSES,
 } from '@ghalla/contracts';
 import { MONEY_PRECISION, MONEY_SCALE } from './money.js';
 
@@ -162,9 +163,21 @@ export const webhookEvents = pgTable(
     rawEventType: text('raw_event_type').notNull(),
     receivedAt: instant('received_at').notNull(),
     processedAt: instant('processed_at'),
-    // pending | processing | processed | failed | skipped
+    // WEBHOOK_EVENT_STATUSES. One list, shared with the CHECK below and with
+    // the repository that reads this column back.
     status: text('status').notNull().default('pending'),
     attempts: integer('attempts').notNull().default(0),
+    // When this row becomes claimable again. A failed attempt pushes it into
+    // the future rather than leaving it at the head of the queue, which is the
+    // difference between a retry and a spin: without it, one poisonous event
+    // is re-claimed as fast as the worker can fail it, and it starves every
+    // healthy event behind it.
+    nextAttemptAt: instant('next_attempt_at').defaultNow().notNull(),
+    // Set when a worker claims the row, cleared when it lets go. This is what
+    // makes a crashed worker recoverable: the row is not lost, it is merely
+    // held, and the reaper can tell held-and-alive from held-by-a-corpse by
+    // how old this is. A queue without it leaks a row per crash, permanently.
+    lockedAt: instant('locked_at'),
     lastError: text('last_error'),
     // Kept for replay and triage only. Contains platform PII, so it is never
     // read into a canonical type and must be purged on the retention schedule —
@@ -178,11 +191,28 @@ export const webhookEvents = pgTable(
     unique('webhook_events_store_event_unique').on(table.storeId, table.platformEventId),
     index('webhook_events_status_idx').on(table.status, table.receivedAt),
     index('webhook_events_store_received_idx').on(table.storeId, table.receivedAt),
+    // THE claim index. Partial, because the queue's hot query only ever asks
+    // for pending work that is due — and the table is dominated by `processed`
+    // rows, which this index therefore does not carry.
+    index('webhook_events_claimable_idx')
+      .on(table.nextAttemptAt)
+      .where(sql`${table.status} = 'pending'`),
+    // The reaper's index, partial for the same reason: in-flight rows are a
+    // handful at any moment, and everything else is noise to this query.
+    index('webhook_events_inflight_idx')
+      .on(table.lockedAt)
+      .where(sql`${table.status} = 'processing'`),
     check('webhook_events_attempts_positive', nonNegative(table.attempts)),
+    // A row is held if and only if it is being worked on. Stated as a
+    // constraint because both halves are silent failures: a `processing` row
+    // with no `locked_at` is invisible to the reaper and stuck forever, and a
+    // released row that kept its lock is a phantom the reaper would keep
+    // "recovering". Either one costs a merchant an order that never computes.
     check(
-      'webhook_events_status_valid',
-      oneOf(table.status, ['pending', 'processing', 'processed', 'failed', 'skipped']),
+      'webhook_events_lock_iff_processing',
+      sql`(${table.status} = 'processing') = (${table.lockedAt} IS NOT NULL)`,
     ),
+    check('webhook_events_status_valid', oneOf(table.status, WEBHOOK_EVENT_STATUSES)),
   ],
 );
 

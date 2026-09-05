@@ -167,10 +167,12 @@ be recomputed. `scripts/check-calc-version.sh` fails CI when an existing expecta
 
 ## What comes next
 
-1. `persistence` — Prisma schema, SCD-2 cost history, the materialized `order_profit` rows and
+1. `persistence` — Drizzle schema, SCD-2 cost history, the materialized `order_profit` rows and
    incremental dirty rollups.
-2. `ingestion` — BullMQ orchestration against a fake in-memory adapter, tested end to end without
-   touching a real platform.
+2. `ingestion` — orchestration over the `webhook_events` queue against a fake in-memory adapter,
+   tested end to end without touching a real platform. The queue is a Postgres table claimed with
+   `FOR UPDATE SKIP LOCKED`, not Redis; see [0006](./0006-ingestion-queue.md) for why, and for the
+   one condition that would change it.
 3. The first real adapter, then the dashboard API and the Arabic RTL UI.
 4. Then the scaffold for a second platform. If its stubs require changing anything in
    `packages/core`, this model is wrong — and that is still the cheapest moment to find out.

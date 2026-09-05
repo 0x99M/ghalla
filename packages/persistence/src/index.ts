@@ -40,3 +40,15 @@ export {
 export type { CostEntry, ProductKeyRef } from './repositories/cost-history.repository.js';
 export { CostHistoryRepository } from './repositories/cost-history.repository.js';
 export { OrderProfitRepository } from './repositories/order-profit.repository.js';
+
+export type {
+  EnqueueOutcome,
+  NewWebhookEvent,
+  RetryPolicy,
+  WebhookEventRecord,
+} from './repositories/webhook-event.repository.js';
+export {
+  DEFAULT_RETRY_POLICY,
+  WebhookEventRepository,
+  backoffMs,
+} from './repositories/webhook-event.repository.js';

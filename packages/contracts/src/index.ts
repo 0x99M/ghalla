@@ -73,6 +73,7 @@ export type {
   ShipmentDirection,
   ShipmentStatus,
   WalletSlug,
+  WebhookEventStatus,
 } from './enums.js';
 export {
   CARD_SCHEMES,
@@ -90,6 +91,7 @@ export {
   REVERSAL_REASONS,
   SHIPMENT_DIRECTIONS,
   SHIPMENT_STATUSES,
+  WEBHOOK_EVENT_STATUSES,
 } from './enums.js';
 
 export type { Assert, AssertNoPii, ForbiddenKey } from './pii.js';

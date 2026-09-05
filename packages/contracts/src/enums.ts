@@ -168,6 +168,27 @@ export const EXACT_COST_SOURCES: readonly CostSource[] = [
 export const DEVICES = ['desktop', 'mobile', 'tablet', 'unknown'] as const;
 export type Device = (typeof DEVICES)[number];
 
+// ------------------------------------------------------------- ingestion ----
+
+/**
+ * The ingestion queue's states.
+ *
+ * Here rather than in the schema because the CHECK constraint and the code that
+ * reads the column must come from ONE list — the same reason every other enum
+ * in this file exists. `skipped` is deliberately distinct from `processed`: an
+ * event this adapter does not handle was seen and dismissed, which is a
+ * different fact from one that was acted on, and neither belongs in the
+ * dead-letter pile with `failed`.
+ */
+export const WEBHOOK_EVENT_STATUSES = [
+  'pending',
+  'processing',
+  'processed',
+  'failed',
+  'skipped',
+] as const;
+export type WebhookEventStatus = (typeof WEBHOOK_EVENT_STATUSES)[number];
+
 // ------------------------------------------------------------ open sets ----
 
 /**
