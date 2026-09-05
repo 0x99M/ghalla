@@ -129,6 +129,40 @@ The API needs a `DATABASE_URL`. For a throwaway one, point it at the staging dat
 Postgres locally and `pnpm db:reset` against it. The unit and schema suites need **no** database:
 PGlite runs Postgres in-process, which is also why CI needs no service container.
 
+## The staging environment, and one Railway finding worth keeping
+
+Staging is the `ghalla` project's `staging` environment: `ghalla-salla-api` (Railpack, deployed
+from `main`) and a Postgres 18 service. The database is reachable from outside only through a TCP
+proxy, which exists so the clear/seed/verify steps of a release can talk to it at all — the private
+`postgres.railway.internal` address is unreachable from a developer machine or from CI.
+
+The service is started with `node apps/ghalla-salla/dist/main.js`, not `pnpm --filter @ghalla/salla
+start`. Railpack's runtime image is not guaranteed to carry the workspace manifests, and a
+`pnpm --filter` that matches nothing does not always exit non-zero — so the package-manager form can
+fail in the one way a start command must never fail, silently. `node` either runs the file or dies
+loudly. The same reasoning applies to the migration.
+
+**The pre-deploy migration needs the command set on the SERVICE, not only in `railway.json`.** This
+was verified rather than assumed, because assuming it is how a deploy goes green against an
+unmigrated database. A deploy whose `railway.json` declared `preDeployCommand` produced no migration
+output at all in the deploy log; setting the same command on the service instance produced
+
+```
+Starting Container
+Running migrations from /app/packages/persistence/drizzle
+Migrations complete
+Stopping Container
+```
+
+before the app container started. The proof that the hook runs at all was a deliberately failing
+probe — a `preDeployCommand` exiting non-zero — which turned the deployment `FAILED` and printed its
+own marker in the deploy log. That is also the guarantee we actually want: **a failed migration
+fails the deploy** rather than letting a service come up against a schema it does not match.
+
+Both places now carry the command, which costs nothing and removes the ambiguity. `verify-staging.sh`
+counts tables afterwards regardless, because the migration hook and the belief that it ran are
+different things.
+
 ## Runbook
 
 | Situation | Command |
@@ -139,4 +173,5 @@ PGlite runs Postgres in-process, which is also why CI needs no service container
 | Release to staging | `pnpm release:staging` |
 | Is staging healthy right now | `pnpm verify:staging` |
 | A deploy failed | `railway logs --service ghalla-salla-api --lines 200` |
+| Did the migration run on that deploy | `railway logs <deployment-id> -d` — look for `Migrations complete` before `Starting Container` |
 | The engine's arithmetic changed | Bump `CALC_VERSION`; the guard fails the build otherwise |
