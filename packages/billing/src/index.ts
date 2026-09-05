@@ -14,8 +14,20 @@
  * tested at one.
  */
 
-export type { Feature, Plan, PlanCode } from './plans.js';
-export { FEATURES, PLAN_CODES, PLANS, TRIAL_DAYS, TRIAL_PLAN, isPlanCode, planOf } from './plans.js';
+export type { BillingInterval, Feature, Plan, PlanCode } from './plans.js';
+export {
+  FEATURES,
+  MONTHS_FREE_ON_ANNUAL,
+  PLAN_CODES,
+  PLANS,
+  TRIAL_DAYS,
+  TRIAL_PLAN,
+  cheapestPlanWith,
+  isDowngrade,
+  isPlanCode,
+  monthlyCapOf,
+  planOf,
+} from './plans.js';
 
 export type {
   ApplyOutcome,
@@ -23,13 +35,13 @@ export type {
   Subscription,
   SubscriptionChange,
 } from './subscription.js';
-export { applyChange, differsFrom, isStale, reconcile } from './subscription.js';
+export { applyChange, differsFrom, effectivePlanCode, isStale, reconcile } from './subscription.js';
 
 export type { AccessDecision, AccessNotice, DashboardAccess, PipelineAccess } from './access.js';
 export { decideAccess, isPaying, isTrialExpired } from './access.js';
 
 export type { Entitlements } from './entitlements.js';
-export { cheapestPlanWith, hasFeature, resolveEntitlements } from './entitlements.js';
+export { hasFeature, resolveEntitlements } from './entitlements.js';
 
 export type { CacheEntry, UsageStatus, UsageWindow } from './usage.js';
 export { UsageCache, usageCacheKey, usageStatus, usageWindow } from './usage.js';

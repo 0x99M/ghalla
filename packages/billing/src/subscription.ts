@@ -1,4 +1,5 @@
 import type { Instant, StoreId, SubscriptionStatus } from '@ghalla/contracts';
+import { isDowngrade, planOf } from './plans.js';
 import type { PlanCode } from './plans.js';
 
 /**
@@ -30,6 +31,18 @@ export interface Subscription {
    */
   readonly lastEventAt: Instant | null;
   readonly lastReconciledAt: Instant | null;
+  /**
+   * A DOWNGRADE that has been agreed but not yet taken effect.
+   *
+   * The platform applies upgrades immediately and prorates them, but defers
+   * downgrades to the end of the paid cycle — the merchant keeps the higher
+   * tier they have already paid for. Recording the intent here rather than
+   * applying it is what makes that true on our side: without it, the webhook
+   * announcing a downgrade strips features from someone with three more weeks
+   * paid for.
+   */
+  readonly pendingPlanCode: string | null;
+  readonly pendingPlanEffectiveAt: Instant | null;
 }
 
 /** What a billing webhook, once parsed, asks us to change. */
@@ -79,6 +92,48 @@ export function isStale(current: Subscription, occurredAt: Instant): boolean {
 }
 
 /**
+ * Is this plan change one we must hold until the period ends?
+ *
+ * Upgrades are immediate and prorated at the platform: the merchant is charged
+ * the difference on the spot and expects the features to unlock on the next
+ * page load, not at the next monthly anchor. Provisioning those late is the
+ * single most visible way to make a paid upgrade feel broken.
+ *
+ * Downgrades go the other way. The platform does not refund the unused
+ * remainder, so the merchant has PAID for the higher tier through to the end of
+ * the cycle and must keep it. Applying the lower plan the moment the webhook
+ * lands takes away something already bought.
+ *
+ * An unknown plan on either side is not deferred: we cannot compare what we
+ * cannot resolve, and holding a change we do not understand is worse than
+ * applying it, because the reconciler will correct an application and cannot
+ * correct a thing sitting in a pending column nobody looks at.
+ */
+function deferUntilPeriodEnd(
+  current: Subscription,
+  change: SubscriptionChange,
+): { readonly defer: boolean; readonly effectiveAt: Instant } {
+  // THE PERIOD ALREADY PAID FOR, which is the one on the row — never the one
+  // the event proposes. A renewal onto a lower plan arrives carrying the NEXT
+  // window, and measuring against that window would find the change "early"
+  // forever: the downgrade would be deferred to a boundary that moves every
+  // time it is deferred, and the merchant would keep the higher tier for good.
+  const paidThrough = current.currentPeriodEnd;
+  if (change.planCode === null || change.planCode === current.planCode) {
+    return { defer: false, effectiveAt: paidThrough };
+  }
+
+  const from = planOf(current.planCode);
+  const to = planOf(change.planCode);
+  if (from === null || to === null) return { defer: false, effectiveAt: paidThrough };
+
+  // A downgrade arriving at or after the paid period has ended is simply the
+  // renewal happening. There is nothing left to defer to.
+  const defer = isDowngrade(from, to) && change.occurredAt < paidThrough;
+  return { defer, effectiveAt: paidThrough };
+}
+
+/**
  * Applies a parsed billing change to the row.
  *
  * Pure, and takes no clock: every interesting case here is a boundary, and a
@@ -98,10 +153,17 @@ export function applyChange(current: Subscription, change: SubscriptionChange): 
     };
   }
 
+  const { defer, effectiveAt } = deferUntilPeriodEnd(current, change);
+
   const next: Subscription = {
     ...current,
     status: change.status,
-    planCode: change.planCode ?? current.planCode,
+    // A deferred downgrade leaves the ACTIVE plan alone. An upgrade — or any
+    // change we are applying now — also clears whatever was pending, because a
+    // merchant who moves up has evidently changed their mind about moving down.
+    planCode: defer ? current.planCode : (change.planCode ?? current.planCode),
+    pendingPlanCode: defer ? change.planCode : null,
+    pendingPlanEffectiveAt: defer ? effectiveAt : null,
     platformPlanId: change.platformPlanId ?? current.platformPlanId,
     trialEndsAt: change.trialEndsAt ?? current.trialEndsAt,
     currentPeriodStart: change.currentPeriodStart ?? current.currentPeriodStart,
@@ -110,6 +172,27 @@ export function applyChange(current: Subscription, change: SubscriptionChange): 
   };
 
   return { kind: 'applied', next };
+}
+
+/**
+ * The plan that is in force RIGHT NOW.
+ *
+ * A pending downgrade becomes the real plan the moment its period ends, and
+ * this is computed at read time rather than flipped by a job. A cron that has
+ * to run at the exact second a period rolls over is a cron that will one day
+ * not run, and the merchant would keep a tier they stopped paying for — or,
+ * with the timing reversed, lose one they still own.
+ *
+ * The row catches up on its own: the renewal webhook carries the new plan, and
+ * the reconciler writes it down if that webhook never arrives.
+ */
+export function effectivePlanCode(subscription: Subscription, now: Instant): string {
+  if (subscription.pendingPlanCode === null || subscription.pendingPlanEffectiveAt === null) {
+    return subscription.planCode;
+  }
+  return now >= subscription.pendingPlanEffectiveAt
+    ? subscription.pendingPlanCode
+    : subscription.planCode;
 }
 
 /**
@@ -163,6 +246,11 @@ export function reconcile(current: Subscription, truth: SubscriptionChange, at: 
       // other; stamping it here would make a reconciliation silently discard
       // the next genuine webhook older than this pass.
       lastReconciledAt: at,
+      // A reconciliation reports what the platform charges for TODAY, which is
+      // still the higher tier during a deferred downgrade. Clearing the pending
+      // change on that basis would cancel a downgrade the merchant asked for.
+      pendingPlanCode: current.pendingPlanCode,
+      pendingPlanEffectiveAt: current.pendingPlanEffectiveAt,
     },
   };
 }

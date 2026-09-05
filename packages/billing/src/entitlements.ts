@@ -1,7 +1,8 @@
 import type { Instant } from '@ghalla/contracts';
 import { PLANS, planOf } from './plans.js';
-import type { Feature, Plan, PlanCode } from './plans.js';
+import type { Feature, Plan } from './plans.js';
 import { decideAccess } from './access.js';
+import { effectivePlanCode } from './subscription.js';
 import type { AccessDecision } from './access.js';
 import type { Subscription } from './subscription.js';
 
@@ -43,11 +44,15 @@ export function resolveEntitlements(
   now: Instant,
   overOrderCap: boolean,
 ): Entitlements {
-  const plan = planOf(subscription.planCode);
+  // The plan IN FORCE, which is not always the one in `plan_code`: a downgrade
+  // agreed mid-cycle sits pending until the period the merchant paid for runs
+  // out, and takes effect at read time rather than waiting for a job to flip it.
+  const code = effectivePlanCode(subscription, now);
+  const plan = planOf(code);
   const effective = plan ?? FALLBACK_PLAN;
 
   return {
-    planCode: subscription.planCode,
+    planCode: code,
     features: effective.features,
     orderCap: effective.orderCap,
     access: decideAccess(subscription, now, overOrderCap),
@@ -66,28 +71,4 @@ export function resolveEntitlements(
  */
 export function hasFeature(entitlements: Entitlements, feature: Feature): boolean {
   return entitlements.features.includes(feature);
-}
-
-/**
- * The cheapest plan that includes a feature, for the upgrade prompt.
- *
- * A denial that says only "403" makes the merchant guess what to buy. Naming
- * the tier turns a dead end into a checkout link, which is the entire point of
- * gating a feature rather than hiding it.
- *
- * "Cheapest" is approximated by declaration order in `PLANS`, which runs
- * cheapest-first. That coupling is stated here rather than left implicit,
- * because reordering that object would silently change what merchants are
- * upsold to.
- */
-export function cheapestPlanWith(feature: Feature): PlanCode | null {
-  // Widened to `Plan` deliberately. `as const satisfies` gives each entry its
-  // own literal feature tuple, which is what makes `PLANS.ads.features` precise
-  // at a call site — and what stops a generic `includes` from type-checking
-  // here. The widening is at the loop, so the precision survives everywhere
-  // else.
-  for (const [code, plan] of Object.entries(PLANS) as readonly [PlanCode, Plan][]) {
-    if (plan.features.includes(feature)) return code;
-  }
-  return null;
 }

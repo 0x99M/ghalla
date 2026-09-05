@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { toInstant } from '@ghalla/contracts';
 import type { Instant, StoreId, SubscriptionStatus } from '@ghalla/contracts';
 import { decideAccess, isPaying, isTrialExpired } from '../src/access.js';
-import { cheapestPlanWith, hasFeature, resolveEntitlements } from '../src/entitlements.js';
-import { FEATURES, PLANS, PLAN_CODES, TRIAL_DAYS, isPlanCode, planOf } from '../src/plans.js';
+import { hasFeature, resolveEntitlements } from '../src/entitlements.js';
+import { FEATURES, PLANS, PLAN_CODES, TRIAL_DAYS, cheapestPlanWith, isPlanCode, planOf } from '../src/plans.js';
 import type { Subscription } from '../src/subscription.js';
 
 const at = (iso: string): Instant => toInstant(iso);
@@ -19,6 +19,8 @@ const subscription = (over: Partial<Subscription> = {}): Subscription => ({
   currentPeriodEnd: at('2026-04-01T00:00:00.000Z'),
   lastEventAt: null,
   lastReconciledAt: null,
+  pendingPlanCode: null,
+  pendingPlanEffectiveAt: null,
   ...over,
 });
 

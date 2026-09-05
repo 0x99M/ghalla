@@ -1264,6 +1264,20 @@ export const storeSubscription = pgTable(
     // days old means the cron is not running, which is how webhook drift goes
     // unnoticed until a merchant complains.
     lastReconciledAt: instant('last_reconciled_at'),
+    // A DOWNGRADE that has been agreed but has not taken effect yet.
+    //
+    // The platform applies upgrades immediately and prorates them, and defers
+    // downgrades to the end of the paid cycle. Recording the intent rather than
+    // applying it is what makes the second half true here: without these two
+    // columns, the webhook announcing a downgrade takes features away from a
+    // merchant with three weeks still paid for.
+    //
+    // Read at request time rather than flipped by a job — a cron that must fire
+    // at the exact second a period rolls over is a cron that will one day not
+    // fire, and the merchant then keeps a tier they stopped paying for, or
+    // loses one they still own.
+    pendingPlanCode: text('pending_plan_code'),
+    pendingPlanEffectiveAt: instant('pending_plan_effective_at'),
     createdAt: instant('created_at').defaultNow().notNull(),
     updatedAt: instant('updated_at').defaultNow().notNull(),
   },
@@ -1277,5 +1291,12 @@ export const storeSubscription = pgTable(
     // every order fall outside it — a merchant would read zero orders and an
     // untouched cap while ingestion ran perfectly.
     check('store_subscription_period_ordered', sql`${table.currentPeriodEnd} > ${table.currentPeriodStart}`),
+    // Both columns or neither. A pending code with no date never takes effect
+    // and a date with no code is a rollover that changes nothing — either half
+    // alone is a downgrade the merchant asked for that silently never happens.
+    check(
+      'store_subscription_pending_plan_complete',
+      sql`(${table.pendingPlanCode} IS NULL) = (${table.pendingPlanEffectiveAt} IS NULL)`,
+    ),
   ],
 );

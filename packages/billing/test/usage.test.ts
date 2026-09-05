@@ -16,6 +16,8 @@ const subscription = (over: Partial<Subscription> = {}): Subscription => ({
   currentPeriodEnd: at('2026-04-01T00:00:00.000Z'),
   lastEventAt: null,
   lastReconciledAt: null,
+  pendingPlanCode: null,
+  pendingPlanEffectiveAt: null,
   ...over,
 });
 

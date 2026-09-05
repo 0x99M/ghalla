@@ -38,6 +38,8 @@ function provisionalTrial(storeId: StoreId, now: Instant): Subscription {
     currentPeriodEnd: toInstant(end.toISOString()),
     lastEventAt: null,
     lastReconciledAt: null,
+    pendingPlanCode: null,
+    pendingPlanEffectiveAt: null,
   };
 }
 

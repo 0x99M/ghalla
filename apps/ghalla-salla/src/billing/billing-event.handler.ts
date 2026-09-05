@@ -77,6 +77,10 @@ export class BillingEventHandler {
       currentPeriodEnd: change.currentPeriodEnd ?? toInstant(fallbackEnd),
       lastEventAt: change.occurredAt,
       lastReconciledAt: null,
+      // A store's FIRST event has no prior plan to be downgraded from, so there
+      // is never anything pending at this point.
+      pendingPlanCode: null,
+      pendingPlanEffectiveAt: null,
     };
   }
 

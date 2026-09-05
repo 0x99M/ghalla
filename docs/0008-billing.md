@@ -130,15 +130,66 @@ come back, and one who cannot will say so publicly.
 cutting someone off over a card that expired on Tuesday — when the bank will
 authorise on Thursday — turns a billing hiccup into a churn event.
 
-## Open questions for the platform
+## Plan changes: immediate up, deferred down
 
-- **Proration.** Whether mid-cycle upgrades are prorated or deferred to renewal
-  needs confirming with Salla partners support, and it sets the timing of the
-  upgrade prompt. Phase 2 monetization depends on existing merchants moving up a
-  tier, so this is worth an email rather than an assumption.
-- **Annual at two months free** is decided but not implemented; it needs plan
-  codes of its own (`growth_annual`, not a flag on `growth`, by the naming rule
-  above).
+Confirmed with the platform, and the two directions are NOT symmetric.
+
+**Upgrades are immediate and prorated.** The unused remainder of the current
+cycle is credited against the new plan and the difference is charged on the
+spot. The merchant expects the features on the next page load, not at the next
+monthly anchor — provisioning late is the most visible way to make a paid
+upgrade feel broken, because they have the receipt and not the feature. Nothing
+special is needed for this: the webhook carries the new plan and `applyChange`
+applies it.
+
+The platform may either preserve the original renewal date or start a fresh
+30-day cycle on the upgrade date. Either is fine, because the period comes from
+the event — and the usage cache keys on `period_start`, so a reset begins a
+fresh count with nothing to invalidate.
+
+**Downgrades are deferred to the end of the paid cycle.** There is no partial
+refund, so the merchant has bought the higher tier through to the end of the
+period and must keep it. `pending_plan_code` and `pending_plan_effective_at`
+hold the agreed change; `effectivePlanCode` applies it at READ time.
+
+Read time, not a job: a cron that has to fire at the exact second a period rolls
+over is a cron that will one day not fire, and the merchant then keeps a tier
+they stopped paying for — or, with the timing reversed, loses one they still
+own. The row catches up on its own when the renewal webhook arrives, and the
+reconciler writes it down if that webhook never does.
+
+The comparison that decides which case applies is about ENTITLEMENTS, not price:
+losing a feature is a downgrade whatever the cap does, and caps are normalised
+to a monthly rate first so that a switch between monthly and annual on the same
+tier is correctly seen as neither.
+
+One bug worth recording, because the test found it and review would not have:
+the deferral originally measured against the period the EVENT carried. A renewal
+onto a lower plan arrives carrying the next window, so the change looked "early"
+against a boundary that moved every time it was deferred — the downgrade would
+have been postponed forever and the merchant would have kept the higher tier for
+good. The boundary is the period already paid for, which is the one on the row.
+
+## Annual
+
+Two months free: pay for ten, get twelve. It reduces churn through the fragile
+first year — the period before a merchant has entered enough cost data to see
+what the product is for — and pulls cash forward.
+
+Annual plans are their own codes (`growth_annual`), never a flag on the monthly
+one, by the same grandfathering rule. Their caps are scaled by twelve so the
+allowance PER MONTH is unchanged: an annual plan buys a longer period, never a
+smaller rate. A `growth_annual` whose cap stayed at 1,500 would be a twelvefold
+cut disguised as a discount, and the merchant would hit it in January.
+
+The price is not here. The platform charges the merchant and is the only place
+an amount is authoritative; duplicating it would create two numbers that can
+disagree about what somebody owes.
+
+An upgrade prompt never offers annual. A merchant hitting a locked feature is
+deciding in the moment, and a twelve-month commitment is a bigger ask than the
+feature is worth to them right then — annual is what you offer someone who has
+already stayed.
 
 ## What is deliberately not wired
 

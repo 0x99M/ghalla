@@ -29,6 +29,8 @@ const subscription = (over: Partial<Subscription> = {}): Subscription => ({
   currentPeriodEnd: at('2026-04-01T00:00:00.000Z'),
   lastEventAt: null,
   lastReconciledAt: null,
+  pendingPlanCode: null,
+  pendingPlanEffectiveAt: null,
   ...over,
 });
 
@@ -110,6 +112,31 @@ describe('the subscription row', () => {
     const found = await repo.find(STORE_ID);
     expect(found?.status).toBe('active');
     expect(found?.planCode).toBe('growth');
+  });
+
+  it('round-trips a downgrade that has not taken effect yet', async () => {
+    // The two pending columns are what keep a merchant on the tier they have
+    // already paid for until the cycle ends. A round trip that dropped them
+    // would apply the downgrade the moment the row was next read.
+    const scheduled = subscription({
+      planCode: 'growth',
+      pendingPlanCode: 'starter',
+      pendingPlanEffectiveAt: at('2026-04-01T00:00:00.000Z'),
+    });
+    await repo.save(scheduled, NOW);
+    expect(await repo.find(STORE_ID)).toStrictEqual(scheduled);
+  });
+
+  it('refuses half a pending downgrade', async () => {
+    // A code with no date never takes effect; a date with no code is a rollover
+    // that changes nothing. Either half alone is a downgrade the merchant asked
+    // for that silently never happens.
+    await repo.save(subscription(), NOW);
+    await expect(
+      client.exec(
+        `UPDATE store_subscription SET pending_plan_code = 'starter' WHERE store_id = 'demo:1'`,
+      ),
+    ).rejects.toThrow(/store_subscription_pending_plan_complete/);
   });
 
   it('returns null for a store with no subscription yet', async () => {

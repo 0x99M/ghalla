@@ -27,6 +27,8 @@ export class SubscriptionRepository {
       currentPeriodEnd: toInstantFromDate(row.currentPeriodEnd),
       lastEventAt: toInstantFromDateOrNull(row.lastEventAt),
       lastReconciledAt: toInstantFromDateOrNull(row.lastReconciledAt),
+      pendingPlanCode: row.pendingPlanCode,
+      pendingPlanEffectiveAt: toInstantFromDateOrNull(row.pendingPlanEffectiveAt),
     };
   }
 
@@ -64,6 +66,11 @@ export class SubscriptionRepository {
       lastEventAt: subscription.lastEventAt === null ? null : toDateFromInstant(subscription.lastEventAt),
       lastReconciledAt:
         subscription.lastReconciledAt === null ? null : toDateFromInstant(subscription.lastReconciledAt),
+      pendingPlanCode: subscription.pendingPlanCode,
+      pendingPlanEffectiveAt:
+        subscription.pendingPlanEffectiveAt === null
+          ? null
+          : toDateFromInstant(subscription.pendingPlanEffectiveAt),
       updatedAt: toDateFromInstant(now),
     };
 

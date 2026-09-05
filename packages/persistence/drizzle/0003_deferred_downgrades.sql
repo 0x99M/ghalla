@@ -1,0 +1,3 @@
+ALTER TABLE "store_subscription" ADD COLUMN "pending_plan_code" text;--> statement-breakpoint
+ALTER TABLE "store_subscription" ADD COLUMN "pending_plan_effective_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "store_subscription" ADD CONSTRAINT "store_subscription_pending_plan_complete" CHECK (("store_subscription"."pending_plan_code" IS NULL) = ("store_subscription"."pending_plan_effective_at" IS NULL));
