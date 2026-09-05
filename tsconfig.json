@@ -5,6 +5,7 @@
     { "path": "./packages/contracts" },
     { "path": "./packages/ports" },
     { "path": "./packages/core" },
-    { "path": "./packages/schemas" }
+    { "path": "./packages/schemas" },
+    { "path": "./packages/persistence" }
   ]
 }

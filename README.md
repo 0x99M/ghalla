@@ -46,6 +46,7 @@ packages/
   schemas/       zod validation for those types, kept out of the engine's dependency graph
   core/          the profit engine — PURE: no I/O, no clock, no randomness
   ports/         interfaces every platform adapter must implement
+  persistence/   Drizzle schema, migrations and repositories — one schema, one database per platform
 apps/            one service per platform (none yet)
 tooling/
   tsconfig/      shared compiler presets: base, library, app
@@ -57,8 +58,9 @@ tooling/
 **Phase 1, step 1 complete — the domain model and the profit engine.**
 
 `computeOrderProfit` is implemented, pure and total: no I/O, no clock, no randomness, and it
-never throws — for any input, including `null`. 23 golden fixtures, 190 tests, `pnpm verify`
-green.
+never throws — for any input, including `null`. The Drizzle schema and its migration are in, and
+the schema tests run against a real Postgres in-process via PGlite — no Docker, no service
+container. 23 golden fixtures, 222 tests, `pnpm verify` green.
 
 - **[docs/0001-domain-model.md](./docs/0001-domain-model.md)** — the seven decisions that
   shape the canonical types, every deviation from the original brief with its justification.
@@ -68,8 +70,11 @@ green.
 
 - **[docs/0003-engine-review.md](./docs/0003-engine-review.md)** — what an adversarial review of
   the arithmetic found, and what changed as a result.
+- **[docs/0004-persistence.md](./docs/0004-persistence.md)** — the schema, why money is
+  `numeric(14, 2)` and still exact, and how the database enforces the domain.
 
-Next: `persistence`, then `ingestion` against a fake adapter, then the first real platform.
+Next: the remaining repositories, then `ingestion` against a fake adapter, then the first real
+platform.
 
 ## Working on it
 
@@ -78,7 +83,9 @@ pnpm install
 pnpm verify        # architecture guards → typecheck → lint → test → dependency graph
 ```
 
-Individually: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm arch`. The same command runs on
+Individually: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm arch`. Database work:
+`pnpm db:generate` after a schema change, `pnpm db:migrate` to apply locally, `pnpm db:studio` to
+browse. The schema tests need no database of their own — they run Postgres in-process. The same command runs on
 every push and pull request — see [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
 
 The guards run *first*, deliberately: one of them asserts that exactly one `eslint.config.*`
@@ -99,4 +106,6 @@ API — `typescript-eslint` peers `<6.1.0`, so TS 7 would silently disarm the bo
   cost today cannot silently change last quarter's profit.
 - No inline webhook processing.
 - No customer PII in the database — structurally, via a compile-time key deny-list over all
-  fourteen canonical types.
+  fourteen canonical types, and a CHECK constraint that rejects a referrer carrying a path.
+- No `Number()` on a money column. Integer halalas in the domain, `numeric(14, 2)` in Postgres,
+  one digit-wise codec between them.

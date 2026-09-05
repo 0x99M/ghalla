@@ -7,11 +7,20 @@ packages:
 # `import { Client } from '@some/platform-sdk'` inside packages/core is
 # unresolvable at type-check, test and runtime — and no eslint-disable reaches it.
 nodeLinker: isolated
-hoist: false
+# PRIVATE hoist only, and only for the one package that needs it. This puts
+# drizzle-orm in node_modules/.pnpm/node_modules, which is on the resolution
+# path for packages INSIDE the store and not for ours — so drizzle-kit finds it
+# and packages/core still cannot. `publicHoistPattern` stays empty, because that
+# one would put it in the root node_modules where the upward walk from
+# packages/core would reach it.
+hoist: true
+hoistPattern:
+  - 'drizzle-orm'
 publicHoistPattern: []
 strictPeerDependencies: true
 linkWorkspacePackages: true
 minimumReleaseAgeExclude:
   - eslint@10.10.0
 allowBuilds:
+  esbuild: true
   unrs-resolver: true

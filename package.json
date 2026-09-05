@@ -29,7 +29,12 @@
     "arch:graph": "depcruise --config .dependency-cruiser.mjs packages apps tooling",
     "arch:vocab": "./scripts/no-platform-vocab.sh",
     "verify": "pnpm run arch:vocab && pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run arch:graph",
-    "clean": "turbo run clean && rm -rf node_modules/.cache .turbo"
+    "clean": "turbo run clean && rm -rf node_modules/.cache .turbo",
+    "db:generate": "pnpm --filter @ghalla/persistence db:generate",
+    "db:migrate": "pnpm --filter @ghalla/persistence db:migrate",
+    "db:push": "pnpm --filter @ghalla/persistence db:push",
+    "db:studio": "pnpm --filter @ghalla/persistence db:studio",
+    "migrate:deploy": "pnpm --filter @ghalla/persistence migrate:deploy"
   },
   "devDependencies": {
     "@ghalla/eslint-config": "workspace:*",

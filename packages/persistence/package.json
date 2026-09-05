@@ -1,0 +1,45 @@
+{
+  "name": "@ghalla/persistence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Drizzle schema, migrations and repositories. One schema, deployed per platform to its own database.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/db/schema.d.ts",
+      "default": "./dist/db/schema.js"
+    }
+  },
+  "files": ["dist", "drizzle"],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "clean": "rm -rf dist",
+    "migrate:deploy": "node dist/db/migrate.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@ghalla/contracts": "workspace:*",
+    "@ghalla/core": "workspace:*",
+    "drizzle-orm": "0.45.2",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@ghalla/tsconfig": "workspace:*",
+    "@types/node": "26.4.1",
+    "@types/pg": "8.23.1",
+    "dotenv": "17.4.2",
+    "drizzle-kit": "0.31.10",
+    "typescript": "6.0.3",
+    "vitest": "5.0.0"
+  }
+}

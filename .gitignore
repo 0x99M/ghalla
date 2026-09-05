@@ -31,9 +31,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# prisma
-packages/persistence/prisma/*.db
-packages/persistence/prisma/*.db-journal
+# drizzle — generated migrations ARE committed; only local databases are not
+packages/persistence/*.db
+packages/persistence/*.db-journal
 
 # local scratch
 /tmp/

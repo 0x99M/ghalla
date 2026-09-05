@@ -1,0 +1,18 @@
+{
+  "//": [
+    "Type-checks the tests. `exactOptionalPropertyTypes` is relaxed for this package",
+    "in tsconfig.json because Drizzle's inferred insert types use `field?: T` rather",
+    "than `field?: T | undefined`; it stays ON in contracts, where it is what makes",
+    "'absence is | null, never ?' enforceable."
+  ],
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts", "drizzle.config.ts"]
+}

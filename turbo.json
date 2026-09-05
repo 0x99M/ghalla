@@ -5,7 +5,8 @@
     "tooling/tsconfig/*.json",
     "eslint.config.js",
     ".dependency-cruiser.mjs",
-    "pnpm-lock.yaml"
+    "pnpm-lock.yaml",
+    "packages/persistence/drizzle/**"
   ],
   "tasks": {
     "build": {
