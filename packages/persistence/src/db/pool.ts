@@ -24,6 +24,24 @@ export interface PoolConfig {
   readonly min?: number | undefined;
   readonly idleTimeoutMs?: number | undefined;
   readonly connectionTimeoutMs?: number | undefined;
+  /**
+   * Server-side cap on a single statement, in milliseconds.
+   *
+   * For the readers: an analytical query that plans badly must not sit holding
+   * a connection the service serving merchants is waiting for. Postgres kills
+   * it; the caller gets an error it can report rather than a page that hangs.
+   */
+  readonly statementTimeoutMs?: number | undefined;
+  /**
+   * Client-side cap, which is NOT the same guarantee.
+   *
+   * `statement_timeout` needs the server to still be talking to us. A server
+   * that accepted the query and then stopped answering — a network partition,
+   * a machine that went away mid-result — trips this one and nothing else.
+   */
+  readonly queryTimeoutMs?: number | undefined;
+  /** Shows up in `pg_stat_activity`, so a heavy query can be attributed to a service by name. */
+  readonly applicationName?: string | undefined;
 }
 
 /**
@@ -65,6 +83,13 @@ export function createPool(config: PoolConfig): Pool {
     min: config.min ?? 0,
     idleTimeoutMillis: config.idleTimeoutMs ?? 30_000,
     connectionTimeoutMillis: config.connectionTimeoutMs ?? 10_000,
+    // Spread rather than passed as `undefined`: `exactOptionalPropertyTypes`
+    // distinguishes an absent option from one explicitly set to undefined, and
+    // node-postgres reads `0` as "no timeout" — so a stray undefined would be a
+    // type error here and a silently disabled timeout if it were coerced.
+    ...(config.statementTimeoutMs === undefined ? {} : { statement_timeout: config.statementTimeoutMs }),
+    ...(config.queryTimeoutMs === undefined ? {} : { query_timeout: config.queryTimeoutMs }),
+    ...(config.applicationName === undefined ? {} : { application_name: config.applicationName }),
   });
 }
 

@@ -16,6 +16,7 @@ export default defineConfig({
       'packages/billing',
       'packages/persistence',
       'apps/ghalla-salla',
+      'apps/ghalla-ops',
     ],
     coverage: {
       provider: 'v8',
@@ -33,10 +34,21 @@ export default defineConfig({
         'packages/ports/src/**',
         'packages/schemas/src/{assert,drift}.ts',
         'packages/persistence/src/db/schema.ts',
+        'apps/ghalla-ops/src/lib/db/portal-schema.ts',
         // Entry points and process wiring, covered by the staging smoke test
         // rather than by unit tests that would only assert their own mocks.
         'packages/persistence/src/db/{pool,migrate}.ts',
         'apps/*/src/main.ts',
+        // Next.js route handlers and pages. A route handler is a signature the
+        // framework calls, and the rule this exclusion depends on is that they
+        // hold NO logic: parse, delegate to lib/, respond. Everything worth
+        // testing lives under lib/ and is tested there. A route that starts
+        // making decisions has to come back into coverage with it.
+        'apps/ghalla-ops/src/app/**',
+        // Pool construction and a driver handle. The behaviour worth testing —
+        // what a connection probe MEANS — is `evaluateProbe`, which is pure.
+        'apps/ghalla-ops/src/lib/db/portal-db.ts',
+        'apps/ghalla-ops/src/lib/platforms/postgres-connection.ts',
         // Framework wiring: a test would assert that NestJS dependency
         // injection works, which is NestJS's job. The logic inside the factory
         // — loadEnv — is covered directly.

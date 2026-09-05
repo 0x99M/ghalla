@@ -12,6 +12,18 @@
     "./schema": {
       "types": "./dist/db/schema.d.ts",
       "default": "./dist/db/schema.js"
+    },
+    "./pool": {
+      "types": "./dist/db/pool.d.ts",
+      "default": "./dist/db/pool.js"
+    },
+    "./money": {
+      "types": "./dist/db/money.d.ts",
+      "default": "./dist/db/money.js"
+    },
+    "./codec": {
+      "types": "./dist/db/codec.d.ts",
+      "default": "./dist/db/codec.js"
     }
   },
   "files": [

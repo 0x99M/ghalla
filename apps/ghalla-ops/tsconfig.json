@@ -1,0 +1,41 @@
+{
+  "//": [
+    "Next.js, so this one cannot extend tooling/tsconfig/app.json: that file is",
+    "shaped for NestJS (decorator metadata, CommonJS-free tsc emit) and Next has",
+    "its own requirements — JSX, bundler resolution, and no emit at all, because",
+    "the compiler here only type-checks and Next does the building.",
+    "",
+    "Relative imports carry NO extension here, and that is the one place this app",
+    "departs from the rest of the repository. Everything else runs under node's",
+    "nodenext resolution, where `./x.js` is required and resolves to `./x.ts`;",
+    "Turbopack does not perform that substitution and fails the build on it. The",
+    "app is bundled rather than executed by node, so the convention that exists to",
+    "keep node happy does not apply — and the one file here that IS run by node,",
+    "scripts/migrate.mjs, is plain JavaScript importing plain JavaScript."
+  ],
+  "extends": "../../tooling/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "jsx": "preserve",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "tsBuildInfoFile": "./.next/.tsbuildinfo",
+    "plugins": [{ "name": "next" }]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "test/**/*.ts",
+    "*.ts",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
+}

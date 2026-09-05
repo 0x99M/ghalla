@@ -29,7 +29,6 @@ export default defineConfig({
     testTimeout: 60_000,
     hookTimeout: 60_000,
     maxWorkers: 2,
-    minWorkers: 1,
     sequence: { groupOrder: 1 },
   },
 });

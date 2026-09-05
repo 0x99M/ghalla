@@ -1,0 +1,42 @@
+{
+  "name": "@ghalla/ops",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The internal operator portal. Reads every integration database through a read-only role, and writes to none of them.",
+  "scripts": {
+    "build": "next build",
+    "start": "next start",
+    "dev": "next dev",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "clean": "rm -rf .next",
+    "migrate:deploy": "node scripts/migrate.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@ghalla/billing": "workspace:*",
+    "@ghalla/contracts": "workspace:*",
+    "@ghalla/persistence": "workspace:*",
+    "drizzle-orm": "0.45.2",
+    "next": "16.3.4",
+    "pg": "8.23.0",
+    "pino": "10.3.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@ghalla/tsconfig": "workspace:*",
+    "@types/node": "26.4.1",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "dotenv": "17.4.2",
+    "drizzle-kit": "0.31.10",
+    "typescript": "6.0.3",
+    "vitest": "5.0.0"
+  }
+}

@@ -50,6 +50,17 @@ export default {
       to: { path: '^packages/contracts/(src|dist)/ingest\\.' },
     },
     {
+      name: 'portal-never-reaches-the-write-repositories',
+      comment:
+        'The operator portal reads every integration database and writes to none of them. It may import ' +
+        'the schema, the pool factory and the codecs by subpath; the package barrel also exports the ' +
+        'repositories, which write, so the bare specifier is refused. Catches what the lint rule cannot: ' +
+        'a dynamic import, and a reach through some other module that imports the barrel.',
+      severity: 'error',
+      from: { path: '^apps/ghalla-ops/' },
+      to: { path: '^packages/persistence/(src|dist)/index\\.' },
+    },
+    {
       name: 'packages-never-import-apps',
       comment: 'The dependency arrow points one way. A shared package that knows about an app is not shared.',
       severity: 'error',
@@ -77,6 +88,12 @@ export default {
           '(^|/)\\.[^/]+\\.(js|cjs|mjs|ts)$',
           '(^|/)tsconfig\\.json$',
           '^packages/contracts/src/ingest\\.ts$',
+          // Next.js discovers these by convention and nothing imports them, so
+          // every one of them is an orphan by construction: route handlers,
+          // pages, layouts, middleware, and the app's own config files.
+          '^apps/ghalla-ops/src/app/',
+          '^apps/ghalla-ops/src/middleware\\.ts$',
+          '^apps/ghalla-ops/(next|drizzle|vitest)\\.config\\.ts$',
         ],
       },
       to: {},
@@ -103,7 +120,12 @@ export default {
     // and silently disarmed the rules above. It is `doNotFollow` instead — the
     // edge into it is recorded, its interior is not walked.
     doNotFollow: { path: '(node_modules|/dist/)' },
-    exclude: { path: '(\\.test\\.ts$|\\.spec\\.ts$|/test/)' },
+    // `.next` is Next.js build output: hundreds of generated chunks that are
+    // orphans by nature and import Next's own vendored runtime. Excluded rather
+    // than merely `doNotFollow`ed, so the edges into them are not recorded either.
+    // `next-env.d.ts` is generated too, and references a types-only specifier
+    // that no resolver can follow.
+    exclude: { path: '(\\.test\\.ts$|\\.spec\\.ts$|/test/|/\\.next/|/next-env\\.d\\.ts$)' },
     tsPreCompilationDeps: true,
     tsConfig: { fileName: 'tsconfig.json' },
     enhancedResolveOptions: {

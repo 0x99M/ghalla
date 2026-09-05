@@ -38,3 +38,5 @@ packages/persistence/*.db-journal
 # local scratch
 /tmp/
 .cache/
+.next/
+next-env.d.ts

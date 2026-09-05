@@ -28,7 +28,7 @@ const NODE_BUILTINS = [
   'stream', 'timers', 'tls', 'url', 'util', 'v8', 'vm', 'worker_threads', 'zlib',
 ];
 
-const TS = '**/*.{ts,mts,cts}';
+const TS = '**/*.{ts,tsx,mts,cts}';
 const PURE_GLOBS = [
   'packages/contracts/**/*.{ts,mts,cts}',
   'packages/core/**/*.{ts,mts,cts}',
@@ -132,7 +132,9 @@ const restrictedImports = ({ allowWorkspace, message }) => ({
 });
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/coverage/**'] },
+  // `.next` is generated: Next writes route type shims into `.next/types`, and
+  // linting them reports thousands of problems in code nobody wrote.
+  { ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/coverage/**', '**/.next/**'] },
 
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -236,6 +238,39 @@ export default tseslint.config(
         },
       ],
     },
+  },
+
+  {
+    // Boundary layer 3 for the operator portal: it may read an integration's
+    // SCHEMA, its pool factory and its codecs, and it may not reach the
+    // repositories. Those write. `@ghalla/persistence` bare is the barrel that
+    // exports them, so the bare specifier is what gets refused — which also
+    // means a repository added later is out of reach without anyone
+    // remembering to update this list.
+    files: ['apps/ghalla-ops/**/*.{ts,tsx,mts,cts}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@ghalla/persistence',
+              message:
+                'The portal never writes to an integration database. Import @ghalla/persistence/schema, ' +
+                '/pool, /money or /codec — the barrel also exports the repositories, which write.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
+    // Plain-JavaScript scripts run by node. `no-undef` is live for these (it is
+    // off for TypeScript, where the compiler already knows), so the handful of
+    // runtime globals they use have to be declared.
+    files: ['**/*.mjs'],
+    languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
   },
 
   // Tests and config files are not architectural elements. Note that the pure

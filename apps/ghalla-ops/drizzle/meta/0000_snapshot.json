@@ -1,0 +1,542 @@
+{
+  "id": "f23fa10e-f176-4385-b7db-202e6b582cf4",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.admin_action_log": {
+      "name": "admin_action_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "actor_session": {
+          "name": "actor_session",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "platform": {
+          "name": "platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "params": {
+          "name": "params",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'dispatched'"
+        },
+        "result": {
+          "name": "result",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "admin_action_log_created_idx": {
+          "name": "admin_action_log_created_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_action_log_store_idx": {
+          "name": "admin_action_log_store_idx",
+          "columns": [
+            {
+              "expression": "platform",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "store_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_action_log_open_idx": {
+          "name": "admin_action_log_open_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"admin_action_log\".\"status\" = 'dispatched'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "admin_action_log_status_valid": {
+          "name": "admin_action_log_status_valid",
+          "value": "\"admin_action_log\".\"status\" IN ('dispatched', 'succeeded', 'failed')"
+        },
+        "admin_action_log_completed_iff_settled": {
+          "name": "admin_action_log_completed_iff_settled",
+          "value": "(\"admin_action_log\".\"status\" = 'dispatched') = (\"admin_action_log\".\"completed_at\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.alert_ack": {
+      "name": "alert_ack",
+      "schema": "",
+      "columns": {
+        "alert_key": {
+          "name": "alert_key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "acknowledged_at": {
+          "name": "acknowledged_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "actor_session": {
+          "name": "actor_session",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "alert_ack_acknowledged_idx": {
+          "name": "alert_ack_acknowledged_idx",
+          "columns": [
+            {
+              "expression": "acknowledged_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.platform_snapshot": {
+      "name": "platform_snapshot",
+      "schema": "",
+      "columns": {
+        "platform": {
+          "name": "platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "captured_hour": {
+          "name": "captured_hour",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active_stores": {
+          "name": "active_stores",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "trialing_stores": {
+          "name": "trialing_stores",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "past_due_stores": {
+          "name": "past_due_stores",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "canceled_stores": {
+          "name": "canceled_stores",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expired_stores": {
+          "name": "expired_stores",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "list_mrr_minor": {
+          "name": "list_mrr_minor",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unpriced_subscriptions": {
+          "name": "unpriced_subscriptions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "orders_ingested_live_24h": {
+          "name": "orders_ingested_live_24h",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "webhooks_processed_24h": {
+          "name": "webhooks_processed_24h",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "webhooks_failed_24h": {
+          "name": "webhooks_failed_24h",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "queue_depth": {
+          "name": "queue_depth",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "queue_stalled": {
+          "name": "queue_stalled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "platform_snapshot_recent_idx": {
+          "name": "platform_snapshot_recent_idx",
+          "columns": [
+            {
+              "expression": "captured_hour",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "platform_snapshot_platform_captured_hour_pk": {
+          "name": "platform_snapshot_platform_captured_hour_pk",
+          "columns": [
+            "platform",
+            "captured_hour"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "platform_snapshot_status_valid": {
+          "name": "platform_snapshot_status_valid",
+          "value": "\"platform_snapshot\".\"status\" IN ('ok', 'unreachable')"
+        },
+        "platform_snapshot_hour_aligned": {
+          "name": "platform_snapshot_hour_aligned",
+          "value": "\"platform_snapshot\".\"captured_hour\" = date_trunc('hour', \"platform_snapshot\".\"captured_hour\" AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'"
+        },
+        "platform_snapshot_metrics_iff_ok": {
+          "name": "platform_snapshot_metrics_iff_ok",
+          "value": "(\"platform_snapshot\".\"status\" = 'ok') = (\"platform_snapshot\".\"active_stores\" IS NOT NULL)"
+        },
+        "platform_snapshot_error_iff_unreachable": {
+          "name": "platform_snapshot_error_iff_unreachable",
+          "value": "(\"platform_snapshot\".\"status\" = 'unreachable') = (\"platform_snapshot\".\"error\" IS NOT NULL)"
+        },
+        "platform_snapshot_counts_positive": {
+          "name": "platform_snapshot_counts_positive",
+          "value": "(\"platform_snapshot\".\"active_stores\" IS NULL OR \"platform_snapshot\".\"active_stores\" >= 0) AND (\"platform_snapshot\".\"trialing_stores\" IS NULL OR \"platform_snapshot\".\"trialing_stores\" >= 0) AND (\"platform_snapshot\".\"past_due_stores\" IS NULL OR \"platform_snapshot\".\"past_due_stores\" >= 0) AND (\"platform_snapshot\".\"canceled_stores\" IS NULL OR \"platform_snapshot\".\"canceled_stores\" >= 0) AND (\"platform_snapshot\".\"expired_stores\" IS NULL OR \"platform_snapshot\".\"expired_stores\" >= 0) AND (\"platform_snapshot\".\"unpriced_subscriptions\" IS NULL OR \"platform_snapshot\".\"unpriced_subscriptions\" >= 0) AND (\"platform_snapshot\".\"orders_ingested_live_24h\" IS NULL OR \"platform_snapshot\".\"orders_ingested_live_24h\" >= 0) AND (\"platform_snapshot\".\"webhooks_processed_24h\" IS NULL OR \"platform_snapshot\".\"webhooks_processed_24h\" >= 0) AND (\"platform_snapshot\".\"webhooks_failed_24h\" IS NULL OR \"platform_snapshot\".\"webhooks_failed_24h\" >= 0) AND (\"platform_snapshot\".\"queue_depth\" IS NULL OR \"platform_snapshot\".\"queue_depth\" >= 0) AND (\"platform_snapshot\".\"queue_stalled\" IS NULL OR \"platform_snapshot\".\"queue_stalled\" >= 0)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.store_snapshot": {
+      "name": "store_snapshot",
+      "schema": "",
+      "columns": {
+        "platform": {
+          "name": "platform",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_id": {
+          "name": "store_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "captured_date": {
+          "name": "captured_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_code": {
+          "name": "plan_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "period_start": {
+          "name": "period_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "period_end": {
+          "name": "period_end",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "orders_in_period": {
+          "name": "orders_in_period",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "coverage_revenue_ex_vat_minor": {
+          "name": "coverage_revenue_ex_vat_minor",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "coverage_covered_revenue_ex_vat_minor": {
+          "name": "coverage_covered_revenue_ex_vat_minor",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_webhook_at": {
+          "name": "last_webhook_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "backfill_orders_status": {
+          "name": "backfill_orders_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "backfill_orders_started_at": {
+          "name": "backfill_orders_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "store_snapshot_date_idx": {
+          "name": "store_snapshot_date_idx",
+          "columns": [
+            {
+              "expression": "captured_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "store_snapshot_store_idx": {
+          "name": "store_snapshot_store_idx",
+          "columns": [
+            {
+              "expression": "platform",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "store_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "captured_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "store_snapshot_platform_store_id_captured_date_pk": {
+          "name": "store_snapshot_platform_store_id_captured_date_pk",
+          "columns": [
+            "platform",
+            "store_id",
+            "captured_date"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "store_snapshot_orders_positive": {
+          "name": "store_snapshot_orders_positive",
+          "value": "(\"store_snapshot\".\"orders_in_period\" IS NULL OR \"store_snapshot\".\"orders_in_period\" >= 0)"
+        },
+        "store_snapshot_coverage_bounded": {
+          "name": "store_snapshot_coverage_bounded",
+          "value": "\"store_snapshot\".\"coverage_covered_revenue_ex_vat_minor\" IS NULL\n          OR \"store_snapshot\".\"coverage_revenue_ex_vat_minor\" IS NULL\n          OR \"store_snapshot\".\"coverage_covered_revenue_ex_vat_minor\" <= \"store_snapshot\".\"coverage_revenue_ex_vat_minor\""
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
