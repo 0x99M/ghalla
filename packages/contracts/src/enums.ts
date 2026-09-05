@@ -189,6 +189,43 @@ export const WEBHOOK_EVENT_STATUSES = [
 ] as const;
 export type WebhookEventStatus = (typeof WEBHOOK_EVENT_STATUSES)[number];
 
+// ------------------------------------------------------------- billing ----
+
+/**
+ * Subscription lifecycle.
+ *
+ * Here rather than in `@ghalla/billing` for one reason: the CHECK constraint on
+ * `store_subscription.status` and the code that reads the column back must come
+ * from ONE list. Plan CODES are the opposite case and deliberately live in
+ * `@ghalla/billing` with no constraint at all — a status is a fixed lifecycle,
+ * a plan is a product decision that must ship without a migration.
+ *
+ * `past_due` is a first-class state and not a flavour of `canceled`: payment
+ * retries frequently succeed, and cutting off a paying merchant over a card
+ * that expired on Tuesday is a reliable way to lose them. It reads as ACTIVE
+ * everywhere access is decided.
+ */
+export const SUBSCRIPTION_STATUSES = [
+  'trialing',
+  'active',
+  'past_due',
+  'canceled',
+  'expired',
+] as const;
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+
+/**
+ * How an order entered the system.
+ *
+ * `backfill` is the one-time historical import an install runs, and it is NEVER
+ * metered: without this column a merchant installs, three years of history
+ * arrives, and they blow a 300-order cap on their first day. It has to be
+ * recorded at ingestion — provenance cannot be re-derived from a row after the
+ * fact, which is why it is added now rather than when metering needs it.
+ */
+export const INGESTION_SOURCES = ['live', 'backfill'] as const;
+export type IngestionSource = (typeof INGESTION_SOURCES)[number];
+
 // ------------------------------------------------------------ open sets ----
 
 /**

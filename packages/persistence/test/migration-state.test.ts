@@ -18,10 +18,22 @@ const REAL_FOLDER = path.resolve(import.meta.dirname, '..', 'drizzle');
 
 describe('reading what the code expects', () => {
   it('reads the tags drizzle-kit recorded, newest last', () => {
+    // Derived from the directory rather than pinned to whatever the newest
+    // migration happens to be — a test naming the tip breaks on every migration
+    // that follows it, which trains people to edit the assertion instead of
+    // reading it.
+    const onDisk = fs
+      .readdirSync(REAL_FOLDER)
+      .filter((name) => name.endsWith('.sql'))
+      .map((name) => name.replace(/\.sql$/, ''))
+      .sort();
+
     const tags = readJournalTags(REAL_FOLDER);
     expect(tags.length).toBeGreaterThanOrEqual(2);
     expect(tags[0]).toBe('0000_init');
-    expect(tags.at(-1)).toBe('0001_webhook_queue');
+    // The journal and the files must agree: a .sql with no journal entry never
+    // runs, and a journal entry with no .sql fails the migrator at boot.
+    expect([...tags].sort()).toStrictEqual(onDisk);
   });
 
   it('reports no tags rather than throwing when the journal is missing', () => {
@@ -153,7 +165,7 @@ describe('against a real database', () => {
     expect(state).toStrictEqual({
       expected,
       applied: expected,
-      latest: '0001_webhook_queue',
+      latest: readJournalTags(REAL_FOLDER).at(-1),
       status: 'current',
     });
   });

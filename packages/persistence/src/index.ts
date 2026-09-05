@@ -49,6 +49,7 @@ export {
 export type { CostEntry, ProductKeyRef } from './repositories/cost-history.repository.js';
 export { CostHistoryRepository } from './repositories/cost-history.repository.js';
 export { OrderProfitRepository } from './repositories/order-profit.repository.js';
+export { SubscriptionRepository } from './repositories/subscription.repository.js';
 
 export type {
   EnqueueOutcome,

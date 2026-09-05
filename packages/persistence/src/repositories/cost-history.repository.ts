@@ -189,10 +189,12 @@ export class CostHistoryRepository {
    * numerator rather than a percentage — percentages do not aggregate.
    */
   async countKeysWithCost(storeId: StoreId): Promise<number> {
-    const [row] = await this.db
+    const rows = await this.db
       .select({ count: sql<number>`count(distinct (${costHistory.platformProductId}, ${costHistory.platformVariantId}))::int` })
       .from(costHistory)
       .where(and(eq(costHistory.storeId, storeId), isNull(costHistory.effectiveTo)));
-    return row?.count ?? 0;
+    // Summed rather than read off `rows[0]`: a COUNT returns one row or none,
+    // and the `?? 0` form spends a branch on a case that cannot happen.
+    return rows.reduce((total, row) => total + row.count, 0);
   }
 }

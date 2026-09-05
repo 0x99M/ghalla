@@ -13,6 +13,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@ghalla/billing": "workspace:*",
     "@ghalla/contracts": "workspace:*",
     "@ghalla/core": "workspace:*",
     "@ghalla/persistence": "workspace:*",
@@ -20,6 +21,7 @@
     "@nestjs/common": "12.0.1",
     "@nestjs/core": "12.0.1",
     "@nestjs/platform-express": "12.0.1",
+    "@nestjs/schedule": "12.0.1",
     "drizzle-orm": "0.45.2",
     "express": "5.2.1",
     "nestjs-pino": "5.1.0",

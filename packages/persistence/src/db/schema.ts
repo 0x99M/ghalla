@@ -29,7 +29,9 @@ import {
   REVERSAL_KINDS,
   REVERSAL_REASONS,
   SHIPMENT_DIRECTIONS,
+  INGESTION_SOURCES,
   SHIPMENT_STATUSES,
+  SUBSCRIPTION_STATUSES,
   WEBHOOK_EVENT_STATUSES,
 } from '@ghalla/contracts';
 import { MONEY_PRECISION, MONEY_SCALE } from './money.js';
@@ -558,6 +560,18 @@ export const orders = pgTable(
     platformStatusId: text('platform_status_id'),
     rawStatusLabel: text('raw_status_label').notNull(),
     isTest: boolean('is_test').notNull().default(false),
+    // How this order entered the system. Recorded AT INGESTION because
+    // provenance cannot be re-derived afterwards: nothing on the row itself
+    // distinguishes an order that arrived by webhook last night from the same
+    // order pulled in by a three-year backfill.
+    //
+    // Metering counts `live` only. Without this column a merchant installs, we
+    // import their history, and they blow a 300-order cap on their first day —
+    // billed for work they did before they had ever heard of us. Defaulting to
+    // `live` is the safe direction: a backfill that forgets to set it
+    // over-counts and is noticed, where defaulting to `backfill` would silently
+    // meter nothing at all.
+    ingestionSource: text('ingestion_source').notNull().default('live'),
 
     // Gates the shipping fallback, which would otherwise invent a courier charge
     // for a pickup order.
@@ -599,10 +613,17 @@ export const orders = pgTable(
     unique('orders_store_platform_order_unique').on(table.storeId, table.platformOrderId),
     // The dashboard's main range scan.
     index('orders_store_placed_idx').on(table.storeId, table.placedAt),
+    // THE metering index. Usage is one aggregate over this, run per dashboard
+    // load behind a short cache, so it must not become a scan of the store's
+    // whole history as a merchant's second year begins.
+    index('orders_metering_idx')
+      .on(table.storeId, table.placedAt)
+      .where(sql`${table.ingestionSource} = 'live'`),
     index('orders_store_updated_idx').on(table.storeId, table.platformUpdatedAt),
     index('orders_customer_ref_idx').on(table.storeId, table.customerRef),
     check('orders_currency_valid', oneOf(table.currency, CURRENCY_CODES)),
     check('orders_lifecycle_valid', oneOf(table.lifecycle, ORDER_LIFECYCLES)),
+    check('orders_ingestion_source_valid', oneOf(table.ingestionSource, INGESTION_SOURCES)),
     check('orders_payment_state_valid', oneOf(table.paymentState, PAYMENT_STATES)),
     check('orders_fulfillment_state_valid', oneOf(table.fulfillmentState, FULFILLMENT_STATES)),
     check('orders_fulfillment_method_valid', oneOf(table.fulfillmentMethod, FULFILLMENT_METHODS)),
@@ -1194,5 +1215,67 @@ export const dailyVariantRollup = pgTable(
       table.businessDate,
       table.contributionMarginMinor,
     ),
+  ],
+);
+
+// ───────────────────────────────────────────────────────────── billing ─────
+
+/**
+ * What plan this store is on, right now.
+ *
+ * ONE ROW PER STORE, and it is the source of truth for request handling. No
+ * request path may ask the platform whether a merchant is entitled: that puts a
+ * network round trip on every page load and turns a third party's outage into
+ * ours, at the exact moment a merchant is trying to look at the dashboard they
+ * are paying for. The platform is consulted on two paths only, both off the
+ * request path — a webhook arriving, and the nightly reconciler.
+ *
+ * `plan_code` carries NO foreign key and NO CHECK, and that is deliberate.
+ * Plans live in code (`@ghalla/billing`) because a plan is a product decision
+ * that belongs in a reviewable diff beside the deploy that introduced it.
+ * Constraining this column would put the plan list back in the database through
+ * the back door and make adding a tier a migration again. `status` is the
+ * opposite case — a fixed lifecycle, checked against the same frozen tuple the
+ * code reads it back with.
+ */
+export const storeSubscription = pgTable(
+  'store_subscription',
+  {
+    storeId: text('store_id')
+      .primaryKey()
+      .references(() => stores.id, { onDelete: 'cascade' }),
+    // Neutral. `growth`, never the platform's own numeric plan id.
+    planCode: text('plan_code').notNull(),
+    // The adapter's mapping target, kept beside the neutral code so a mapping
+    // gap is diagnosable rather than merely wrong.
+    platformPlanId: text('platform_plan_id'),
+    status: text('status').notNull(),
+    trialEndsAt: instant('trial_ends_at'),
+    // The metering window, half-open: [start, end). An order on the final
+    // millisecond belongs to this period, one on the next belongs to the next.
+    currentPeriodStart: instant('current_period_start').notNull(),
+    currentPeriodEnd: instant('current_period_end').notNull(),
+    // THE ORDERING GUARD. The occurrence time of the newest event applied —
+    // the platform's clock, not ours. Webhooks arrive out of order, and a
+    // delayed `subscription.canceled` landing after a `renewed` locks out a
+    // merchant who has just paid. Nothing else in the system would notice.
+    lastEventAt: instant('last_event_at'),
+    // When the reconciler last agreed with the platform. A row whose value is
+    // days old means the cron is not running, which is how webhook drift goes
+    // unnoticed until a merchant complains.
+    lastReconciledAt: instant('last_reconciled_at'),
+    createdAt: instant('created_at').defaultNow().notNull(),
+    updatedAt: instant('updated_at').defaultNow().notNull(),
+  },
+  (table) => [
+    // The reconciler sweeps by staleness, oldest first, so it makes progress
+    // even when it cannot finish every store in one pass.
+    index('store_subscription_reconcile_idx').on(table.lastReconciledAt),
+    index('store_subscription_status_idx').on(table.status),
+    check('store_subscription_status_valid', oneOf(table.status, SUBSCRIPTION_STATUSES)),
+    // A period that ends before it starts makes the usage window negative and
+    // every order fall outside it — a merchant would read zero orders and an
+    // untouched cap while ingestion ran perfectly.
+    check('store_subscription_period_ordered', sql`${table.currentPeriodEnd} > ${table.currentPeriodStart}`),
   ],
 );

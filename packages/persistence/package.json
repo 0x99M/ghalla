@@ -14,7 +14,10 @@
       "default": "./dist/db/schema.js"
     }
   },
-  "files": ["dist", "drizzle"],
+  "files": [
+    "dist",
+    "drizzle"
+  ],
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc -p tsconfig.test.json",
@@ -27,6 +30,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@ghalla/billing": "workspace:*",
     "@ghalla/contracts": "workspace:*",
     "@ghalla/core": "workspace:*",
     "drizzle-orm": "0.45.2",

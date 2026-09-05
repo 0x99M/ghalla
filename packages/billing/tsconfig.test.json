@@ -1,0 +1,22 @@
+{
+  "//": [
+    "Type-checks the tests, which the build config deliberately excludes from dist.",
+    "",
+    "`types: [node]` appears HERE and never in tsconfig.json, so `process` and a",
+    "clock stay build errors inside src/. Entitlement resolution takes `now` as an",
+    "argument for the same reason the profit engine does: a decision that reads the",
+    "wall clock cannot be tested at a period boundary, and every interesting case",
+    "here IS a boundary."
+  ],
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

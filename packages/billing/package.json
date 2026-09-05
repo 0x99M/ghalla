@@ -1,0 +1,32 @@
+{
+  "name": "@ghalla/billing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Subscription state, entitlements and usage metering. Pure: no I/O, no clock, no platform vocabulary.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --passWithNoTests",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc -p tsconfig.test.json"
+  },
+  "//dependencies": "Same rule as core: exactly one, and a second is an architecture decision.",
+  "dependencies": {
+    "@ghalla/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@ghalla/tsconfig": "workspace:*",
+    "@types/node": "26.4.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.0"
+  }
+}

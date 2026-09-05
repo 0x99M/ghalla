@@ -13,6 +13,7 @@ export default defineConfig({
       'packages/contracts',
       'packages/core',
       'packages/schemas',
+      'packages/billing',
       'packages/persistence',
       'apps/ghalla-salla',
     ],
@@ -28,6 +29,7 @@ export default defineConfig({
         // for files that cannot be covered by definition.
         'packages/contracts/src/{store,order,order-item,shipment,product,reversal,payment,pii,pii-audit,brand}.ts',
         'packages/core/src/{config,cost,input,result,fee-rules,confidence}.ts',
+        'packages/billing/src/index.ts',
         'packages/ports/src/**',
         'packages/schemas/src/{assert,drift}.ts',
         'packages/persistence/src/db/schema.ts',

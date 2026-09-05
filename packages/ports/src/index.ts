@@ -28,5 +28,11 @@ export { ADAPTER_ERROR_KINDS, isAdapterError } from './errors.js';
 
 export type { PlatformAdapter } from './platform-adapter.js';
 
-export type { BillingAdapter, BillingEvent, BillingEventType, StoreSubscription } from './billing-adapter.js';
+export type {
+  BillingAdapter,
+  BillingEvent,
+  BillingEventType,
+  PlatformSubscription,
+  SubscriptionFacts,
+} from './billing-adapter.js';
 export { BILLING_EVENT_TYPES } from './billing-adapter.js';

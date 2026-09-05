@@ -60,6 +60,7 @@ export type {
   CarrierSlug,
   CostSource,
   Device,
+  IngestionSource,
   FulfillmentMethod,
   FulfillmentState,
   OrderLifecycle,
@@ -72,6 +73,7 @@ export type {
   ReversalReason,
   ShipmentDirection,
   ShipmentStatus,
+  SubscriptionStatus,
   WalletSlug,
   WebhookEventStatus,
 } from './enums.js';
@@ -80,6 +82,7 @@ export {
   COST_SOURCES,
   DEVICES,
   EXACT_COST_SOURCES,
+  INGESTION_SOURCES,
   FULFILLMENT_METHODS,
   FULFILLMENT_STATES,
   ORDER_LIFECYCLES,
@@ -91,6 +94,7 @@ export {
   REVERSAL_REASONS,
   SHIPMENT_DIRECTIONS,
   SHIPMENT_STATUSES,
+  SUBSCRIPTION_STATUSES,
   WEBHOOK_EVENT_STATUSES,
 } from './enums.js';
 

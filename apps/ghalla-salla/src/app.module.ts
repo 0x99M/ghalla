@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { LoggerModule } from 'nestjs-pino';
+import { BillingModule } from './billing/billing.module.js';
 import { DbModule } from './db/db.module.js';
 import { HealthModule } from './health/health.module.js';
 import { loadEnv } from './config/env.js';
@@ -20,6 +21,16 @@ import { buildLoggerOptions } from './logging/log-config.js';
  * data lives in `logging/`, where it is a pure function with tests on it.
  */
 @Module({
-  imports: [LoggerModule.forRoot({ pinoHttp: buildLoggerOptions(loadEnv()) }), DbModule, HealthModule],
+  imports: [
+    LoggerModule.forRoot({ pinoHttp: buildLoggerOptions(loadEnv()) }),
+    DbModule,
+    HealthModule,
+    // Loaded for the reconciliation cron. The entitlements guard it provides is
+    // deliberately NOT registered globally and no controller carries
+    // `@RequiresFeature` yet — there is nothing store-scoped to gate until the
+    // dashboard API exists, and a global guard would start resolving
+    // entitlements for the healthcheck.
+    BillingModule,
+  ],
 })
 export class AppModule {}
