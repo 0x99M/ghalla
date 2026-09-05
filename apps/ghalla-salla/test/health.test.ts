@@ -32,8 +32,15 @@ const unreachable = (): Db => dbThat(() => Promise.reject(new Error('ECONNREFUSE
 const MIGRATIONS = path.resolve(import.meta.dirname, '..', '..', '..', 'packages', 'persistence', 'drizzle');
 const EXPECTED = readJournalTags(MIGRATIONS).length;
 
+const AT = '2026-09-05T12:00:00.000Z';
+
 const service = (db: Db): InstanceType<typeof HealthService> =>
-  new HealthService(db, MIGRATIONS);
+  new HealthService(db, MIGRATIONS, {
+    // A catalog check that has already answered `ok`, so these tests exercise
+    // the database and schema halves rather than the plan half. The plan half
+    // has its own suite.
+    current: () => ({ state: 'ok', plansChecked: 6, checkedAt: '2026-09-05T12:00:00.000Z' }),
+  } as never);
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -50,9 +57,35 @@ describe('HealthService', () => {
       database: 'ok',
       schema: 'current',
       migrations: { applied: EXPECTED, expected: EXPECTED },
+      plans: { state: 'ok', plansChecked: 6, checkedAt: AT },
       environment: undefined,
       commit: undefined,
     });
+  });
+
+  it('DEGRADES ON A PLAN MISMATCH, so the deploy that introduced one cannot go green', async () => {
+    // The database is fine and the schema is current; the only thing wrong is
+    // that this build's prices disagree with the platform's. That is exactly
+    // the fault worth stopping a release for: both systems keep working, and
+    // the merchant is charged for a tier the code will not grant them.
+    const withMismatch = new HealthService(reachable(EXPECTED), MIGRATIONS, {
+      current: () => ({ state: 'mismatch', problems: ['"growth" is 24900 here and 19900 at the platform'], checkedAt: AT }),
+    } as never);
+
+    const report = await withMismatch.check({});
+    expect(report.database).toBe('ok');
+    expect(report.schema).toBe('current');
+    expect(report.status).toBe('degraded');
+  });
+
+  it('stays green when the catalog is merely UNVERIFIED', async () => {
+    // No source wired, or the platform is down. Neither is evidence of a fault
+    // on our side, and failing on it would let a third party's outage block
+    // every deploy we make.
+    const unverified = new HealthService(reachable(EXPECTED), MIGRATIONS, {
+      current: () => ({ state: 'unverified', reason: 'no plan catalog source is wired', checkedAt: null }),
+    } as never);
+    expect((await unverified.check({})).status).toBe('ok');
   });
 
   it('reports degraded when the database is unreachable, rather than throwing', async () => {

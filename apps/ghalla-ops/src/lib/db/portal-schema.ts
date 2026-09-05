@@ -111,10 +111,10 @@ export const platformSnapshot = pgTable(
     // LIST price, summed over the subscriptions this build can price. Not what
     // anyone was charged — see docs/0009 — which is why the name says list.
     listMrrMinor: money('list_mrr_minor'),
-    // Subscriptions whose plan code this build cannot price, excluded from the
-    // sum above. Reported rather than swallowed: a new plan code that nobody
-    // priced would otherwise show up as a quiet fall in MRR.
-    unpricedSubscriptions: integer('unpriced_subscriptions'),
+    // Subscriptions whose plan code this build does not recognise, excluded
+    // from the sum above. Reported rather than swallowed: a plan published
+    // after this deploy would otherwise show up as a quiet fall in MRR.
+    unknownPlanSubscriptions: integer('unknown_plan_subscriptions'),
 
     // `live` only. A backfill is not merchant activity and counting it would
     // make every install look like a spike.
@@ -155,7 +155,7 @@ export const platformSnapshot = pgTable(
         table.pastDueStores,
         table.canceledStores,
         table.expiredStores,
-        table.unpricedSubscriptions,
+        table.unknownPlanSubscriptions,
         table.ordersIngestedLive24h,
         table.webhooksProcessed24h,
         table.webhooksFailed24h,

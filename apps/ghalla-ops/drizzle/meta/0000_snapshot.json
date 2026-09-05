@@ -1,5 +1,5 @@
 {
-  "id": "f23fa10e-f176-4385-b7db-202e6b582cf4",
+  "id": "98f8a6e4-189d-4327-8e6a-5992861b6c5d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -265,8 +265,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "unpriced_subscriptions": {
-          "name": "unpriced_subscriptions",
+        "unknown_plan_subscriptions": {
+          "name": "unknown_plan_subscriptions",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -363,7 +363,7 @@
         },
         "platform_snapshot_counts_positive": {
           "name": "platform_snapshot_counts_positive",
-          "value": "(\"platform_snapshot\".\"active_stores\" IS NULL OR \"platform_snapshot\".\"active_stores\" >= 0) AND (\"platform_snapshot\".\"trialing_stores\" IS NULL OR \"platform_snapshot\".\"trialing_stores\" >= 0) AND (\"platform_snapshot\".\"past_due_stores\" IS NULL OR \"platform_snapshot\".\"past_due_stores\" >= 0) AND (\"platform_snapshot\".\"canceled_stores\" IS NULL OR \"platform_snapshot\".\"canceled_stores\" >= 0) AND (\"platform_snapshot\".\"expired_stores\" IS NULL OR \"platform_snapshot\".\"expired_stores\" >= 0) AND (\"platform_snapshot\".\"unpriced_subscriptions\" IS NULL OR \"platform_snapshot\".\"unpriced_subscriptions\" >= 0) AND (\"platform_snapshot\".\"orders_ingested_live_24h\" IS NULL OR \"platform_snapshot\".\"orders_ingested_live_24h\" >= 0) AND (\"platform_snapshot\".\"webhooks_processed_24h\" IS NULL OR \"platform_snapshot\".\"webhooks_processed_24h\" >= 0) AND (\"platform_snapshot\".\"webhooks_failed_24h\" IS NULL OR \"platform_snapshot\".\"webhooks_failed_24h\" >= 0) AND (\"platform_snapshot\".\"queue_depth\" IS NULL OR \"platform_snapshot\".\"queue_depth\" >= 0) AND (\"platform_snapshot\".\"queue_stalled\" IS NULL OR \"platform_snapshot\".\"queue_stalled\" >= 0)"
+          "value": "(\"platform_snapshot\".\"active_stores\" IS NULL OR \"platform_snapshot\".\"active_stores\" >= 0) AND (\"platform_snapshot\".\"trialing_stores\" IS NULL OR \"platform_snapshot\".\"trialing_stores\" >= 0) AND (\"platform_snapshot\".\"past_due_stores\" IS NULL OR \"platform_snapshot\".\"past_due_stores\" >= 0) AND (\"platform_snapshot\".\"canceled_stores\" IS NULL OR \"platform_snapshot\".\"canceled_stores\" >= 0) AND (\"platform_snapshot\".\"expired_stores\" IS NULL OR \"platform_snapshot\".\"expired_stores\" >= 0) AND (\"platform_snapshot\".\"unknown_plan_subscriptions\" IS NULL OR \"platform_snapshot\".\"unknown_plan_subscriptions\" >= 0) AND (\"platform_snapshot\".\"orders_ingested_live_24h\" IS NULL OR \"platform_snapshot\".\"orders_ingested_live_24h\" >= 0) AND (\"platform_snapshot\".\"webhooks_processed_24h\" IS NULL OR \"platform_snapshot\".\"webhooks_processed_24h\" >= 0) AND (\"platform_snapshot\".\"webhooks_failed_24h\" IS NULL OR \"platform_snapshot\".\"webhooks_failed_24h\" >= 0) AND (\"platform_snapshot\".\"queue_depth\" IS NULL OR \"platform_snapshot\".\"queue_depth\" >= 0) AND (\"platform_snapshot\".\"queue_stalled\" IS NULL OR \"platform_snapshot\".\"queue_stalled\" >= 0)"
         }
       },
       "isRLSEnabled": false

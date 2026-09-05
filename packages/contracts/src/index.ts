@@ -60,6 +60,7 @@ export type {
   CarrierSlug,
   CostSource,
   Device,
+  BillingInterval,
   IngestionSource,
   FulfillmentMethod,
   FulfillmentState,
@@ -78,6 +79,7 @@ export type {
   WebhookEventStatus,
 } from './enums.js';
 export {
+  BILLING_INTERVALS,
   CARD_SCHEMES,
   COST_SOURCES,
   DEVICES,

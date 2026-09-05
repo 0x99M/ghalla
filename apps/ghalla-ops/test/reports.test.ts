@@ -79,9 +79,9 @@ describe('overview', () => {
 describe('revenue', () => {
   it('reports list MRR and says plainly that history is not built yet', async () => {
     const report = await revenue(working(), '30d', NOW);
-    // No prices are configured, so every subscription is unpriced.
-    expect(report.listMrrMinor).toBe(0);
-    expect(report.unpricedSubscriptions).toBe(4);
+    expect(report.listMrrMinor).toBe(24_900 + 12_900 + 44_900);
+    // Only demo:7, on a plan code this build does not know.
+    expect(report.unknownPlanSubscriptions).toBe(1);
     expect(report.series).toBeNull();
     expect(report.seriesUnavailable).toContain('snapshot job');
     expect(report.range).toBe('30d');

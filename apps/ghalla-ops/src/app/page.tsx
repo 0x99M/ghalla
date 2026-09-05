@@ -23,8 +23,8 @@ export default async function OverviewPage() {
       </p>
       <p>
         List MRR {report.totals.listMrrMinor} halalas
-        {report.totals.unpricedSubscriptions > 0
-          ? ` (${report.totals.unpricedSubscriptions} subscriptions unpriced and excluded)`
+        {report.totals.unknownPlanSubscriptions > 0
+          ? ` (${report.totals.unknownPlanSubscriptions} subscriptions on a plan code this build does not know, excluded)`
           : null}
       </p>
       <p>

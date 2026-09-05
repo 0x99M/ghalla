@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { toInstant, toMinor } from '@ghalla/contracts';
-import type { Minor } from '@ghalla/contracts';
-import type { ListPrices, PlanCode } from '@ghalla/billing';
+import { PLANS } from '@ghalla/billing';
 import { NOW, at, createIntegrationDb, seed } from './support/integration-db';
 import type { IntegrationDb } from './support/integration-db';
 import { platformCoverage, coverageByStore, storeCoverage, toCoverageBps } from '../src/lib/queries/coverage';
@@ -29,18 +28,6 @@ import { COVERAGE_DAYS, trailingDays, trailingHours } from '../src/lib/queries/w
 let integration: IntegrationDb;
 const AT = toInstant(NOW.toISOString());
 
-/** Test prices, so the arithmetic is exercised with real numbers. */
-const PRICES = {
-  starter: toMinor(9_900),
-  growth: toMinor(29_900),
-  scale: toMinor(79_900),
-  ads: toMinor(149_900),
-  starter_annual: toMinor(99_000),
-  growth_annual: toMinor(299_000),
-  scale_annual: toMinor(799_000),
-  ads_annual: toMinor(1_499_000),
-} as const satisfies Record<PlanCode, Minor | null> as ListPrices;
-
 beforeAll(async () => {
   integration = await createIntegrationDb();
   await seed(integration.client);
@@ -65,38 +52,32 @@ describe('statusCounts', () => {
 
 describe('mrr', () => {
   it('EXCLUDES TRIALING, because a trial owes nothing', async () => {
-    const result = await mrr(integration.db, AT, PRICES);
+    const result = await mrr(integration.db, AT);
     // demo:1 growth, demo:2 starter, demo:3 scale, demo:7 on an unknown code.
     // Not demo:4 (trialing), not demo:5 (canceled).
     expect(result.billedStores).toBe(4);
-    expect(result.listMrrMinor).toBe(9_900 + 29_900 + 79_900);
+    expect(result.listMrrMinor).toBe(PLANS.growth.priceMinor + PLANS.starter.priceMinor + PLANS.scale.priceMinor);
+    expect(result.listMrrMinor).toBe(24_900 + 12_900 + 44_900);
   });
 
   it('includes past_due, because the subscription still exists and still owes', async () => {
-    const result = await mrr(integration.db, AT, PRICES);
+    const result = await mrr(integration.db, AT);
     expect(result.byPlan.map((plan) => plan.planCode).sort()).toEqual(['growth', 'scale', 'starter']);
   });
 
   it('annualises before summing, so the total is not the sum of rounded parts', async () => {
-    const result = await mrr(integration.db, AT, PRICES);
-    expect(result.listArrMinor).toBe((9_900 + 29_900 + 79_900) * 12);
+    const result = await mrr(integration.db, AT);
+    expect(result.listArrMinor).toBe((24_900 + 12_900 + 44_900) * 12);
   });
 
   it('EXCLUDES A PLAN CODE THIS BUILD DOES NOT KNOW, and says so', async () => {
     // What a rollback to an older image looks like from here: a row naming a
     // plan the running code has never heard of. Silently dropping it would
-    // make MRR fall for a reason nobody could find.
-    const result = await mrr(integration.db, AT, PRICES);
-    expect(result.unpricedPlans).toEqual([{ planCode: 'growth_v99', stores: 1 }]);
-    expect(result.listMrrMinor).toBe(9_900 + 29_900 + 79_900);
-  });
-
-  it('reports every plan as unpriced while no list price is configured', async () => {
-    // The default map has no prices yet, so every subscription is unpriced —
-    // loudly wrong instead of quietly wrong.
+    // make MRR fall for a reason nobody could find. Now that every KNOWN plan
+    // carries a price, this is the only way a subscription leaves the total.
     const result = await mrr(integration.db, AT);
-    expect(result.listMrrMinor).toBe(0);
-    expect(result.unpricedPlans.reduce((sum, plan) => sum + plan.stores, 0)).toBe(4);
+    expect(result.unknownPlans).toEqual([{ planCode: 'growth_v99', stores: 1 }]);
+    expect(result.listMrrMinor).toBe(24_900 + 12_900 + 44_900);
   });
 
   it('derives the billed statuses from the domain predicate', () => {

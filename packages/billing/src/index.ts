@@ -22,11 +22,14 @@ export {
   PLANS,
   TRIAL_DAYS,
   TRIAL_PLAN,
+  PURCHASABLE_PLAN_CODES,
+  annualPriceOf,
   cheapestPlanWith,
   isDowngrade,
   isPlanCode,
   monthlyCapOf,
   planOf,
+  priceOf,
 } from './plans.js';
 
 export type {
@@ -51,8 +54,10 @@ export { decideAccess, isBilled, isPaying, isTrialExpired } from './access.js';
 export type { Entitlements } from './entitlements.js';
 export { hasFeature, resolveEntitlements } from './entitlements.js';
 
-export type { ListPrices } from './pricing.js';
-export { LIST_PRICES, annualisedListPrice, toMonthlyRate } from './pricing.js';
+export { annualisedPrice, toMonthlyRate } from './pricing.js';
+
+export type { CatalogMismatch, CatalogVerdict, PlanListing } from './plan-catalog.js';
+export { comparePlanCatalog, describeMismatch } from './plan-catalog.js';
 
 export type { BillingPeriod, CacheEntry, UsageStatus, UsageWindow } from './usage.js';
 export { UsageCache, usageCacheKey, usageStatus, usageWindow } from './usage.js';

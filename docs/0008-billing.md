@@ -104,6 +104,74 @@ Grandfathering is a naming rule and it is the only thing keeping this honest:
 when a plan's contents change, add a new code. `growth` stays `growth`. Editing
 an entry would silently re-price every existing subscriber.
 
+## Prices are in the plan table, and asserted against the platform
+
+An earlier version of `plans.ts` said prices must NOT live there: the platform
+charges the merchant and is the only authoritative source, so a second copy
+creates two numbers that can disagree about what somebody owes.
+
+The premise was right and the conclusion was wrong. The price is needed here —
+to report revenue, to size a tier, to say what an upgrade costs — so refusing to
+write it down does not remove the second number, it puts it somewhere less
+reviewable. What actually fixes the problem is making disagreement impossible to
+ship:
+
+| | SAR/month | halalas | annual (10 months) |
+|---|---|---|---|
+| starter | 129 | 12,900 | 129,000 |
+| growth | 249 | 24,900 | 249,000 |
+| scale | 449 | 44,900 | 449,000 |
+| ads | 649 | 64,900 | 649,000 |
+
+All excluding VAT. `annualPriceMinor` is the DISCOUNTED annual form of the tier;
+`annualisedPrice()` is what a subscription actually collects over twelve months,
+and for a monthly plan those differ by exactly the two free months. Using the
+first where the second belongs understates MRR by a sixth for every monthly
+subscriber — which looks like a slow unexplained decline rather than a bug.
+
+**`comparePlanCatalog` is what makes holding the numbers here defensible.** It
+reads the plans the platform actually has configured and reports every way the
+two tables disagree: a price edited in the partner portal, a published plan the
+adapter cannot map, a plan naming a code this build does not know, two platform
+plans claiming one code, an interval changed underneath us, or the unreleased
+tier put on sale. The two systems are edited by different people at different
+times and when they drift BOTH STAY INTERNALLY CONSISTENT — the platform charges
+its number and the code grants the tier it thinks its own number buys. The
+merchant is the only party who sees both.
+
+`PlanCatalogService` runs it at startup and hourly. What a mismatch does, and
+what it deliberately does not do:
+
+- it **fails the healthcheck**, so a deploy that introduces one does not go green
+  and the previous version stays up;
+- it does **not** stop a running service. Ingestion and profit computation carry
+  on, for the same reason the caps are soft: a data gap is permanent and a wrong
+  price on a pricing page is not. Somebody editing a price at 23:00 must not
+  take down every merchant's ingestion.
+
+`unverified` — no source wired, or the platform unreachable — is GREEN. Neither
+is evidence of a fault on our side, and failing on it would let a third party's
+outage block every release. It is loud in the body and the log instead.
+`pending` is red for the second or two before the startup check answers: green
+there would let a deploy pass on the first poll and never learn the answer,
+which would give the gate no teeth at all.
+
+## `ads` is defined and not for sale
+
+It gates `attribution`, `ltv` and `reports`, and none of them are built. It is
+defined now so the gating is written and tested against a real plan rather than
+retrofitted onto one later, and `purchasable: false` is what keeps it off the
+shelf until then.
+
+Two consequences follow, and both are enforced rather than remembered:
+
+- **it must be absent from the platform's plan list**, which the catalog check
+  asserts — a published `ads` is a mismatch;
+- **`cheapestPlanWith` never names it.** A merchant hitting a locked feature
+  gets `null` and a 402 that says "not yet" without naming a tier, because
+  naming one would send them to a checkout that does not exist for features that
+  would not arrive.
+
 An unknown plan code **fails closed** — `core` only, starter's cap — and is
 surfaced as a metric. Failing open would make "write a plan code nobody
 recognises" a way to obtain the top tier.
@@ -182,9 +250,10 @@ allowance PER MONTH is unchanged: an annual plan buys a longer period, never a
 smaller rate. A `growth_annual` whose cap stayed at 1,500 would be a twelvefold
 cut disguised as a discount, and the merchant would hit it in January.
 
-The price is not here. The platform charges the merchant and is the only place
-an amount is authoritative; duplicating it would create two numbers that can
-disagree about what somebody owes.
+The price IS here, alongside the monthly one, and the catalog check above is
+what keeps it equal to the platform's. Ten months for twelve, so
+`annualPriceMinor` is always `priceMinor * 10` on a monthly tier — a property
+the test suite asserts rather than trusting four numbers to stay in step.
 
 An upgrade prompt never offers annual. A merchant hitting a locked feature is
 deciding in the moment, and a twelve-month commitment is a bigger ask than the

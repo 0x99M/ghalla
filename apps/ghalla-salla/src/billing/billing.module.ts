@@ -8,6 +8,7 @@ import { BillingEventHandler } from './billing-event.handler.js';
 import { BillingMetrics } from './billing.metrics.js';
 import { EntitlementsGuard } from './entitlements.guard.js';
 import { EntitlementsService } from './entitlements.service.js';
+import { PlanCatalogService } from './plan-catalog.service.js';
 import { ReconciliationService } from './reconciliation.service.js';
 import { SubscriptionRefreshService } from './subscription-refresh.service.js';
 
@@ -19,9 +20,11 @@ import { SubscriptionRefreshService } from './subscription-refresh.service.js';
  * gate until the dashboard API exists, and a globally-registered guard would
  * start resolving entitlements for the healthcheck.
  *
- * `SUBSCRIPTION_SOURCE` is likewise unbound. The reconciler logs and skips
- * without it rather than pretending it found no drift — the Salla adapter fills
- * that slot.
+ * `SUBSCRIPTION_SOURCE` and `PLAN_CATALOG_SOURCE` are likewise unbound. The
+ * reconciler logs and skips without one, and the catalog check reports
+ * `unverified` rather than `ok` — pretending either found nothing wrong would
+ * be indistinguishable from actually finding nothing wrong. The Salla adapter
+ * fills both slots.
  */
 @Module({
   imports: [DbModule, ScheduleModule.forRoot()],
@@ -40,6 +43,7 @@ import { SubscriptionRefreshService } from './subscription-refresh.service.js';
     BillingEventHandler,
     SubscriptionRefreshService,
     ReconciliationService,
+    PlanCatalogService,
   ],
   exports: [
     EntitlementsService,
@@ -47,6 +51,7 @@ import { SubscriptionRefreshService } from './subscription-refresh.service.js';
     BillingEventHandler,
     SubscriptionRefreshService,
     ReconciliationService,
+    PlanCatalogService,
     BillingMetrics,
   ],
 })

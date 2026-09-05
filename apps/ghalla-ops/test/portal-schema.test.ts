@@ -37,7 +37,7 @@ const HOUR = `'2026-09-05T09:00:00Z'`;
 
 const OK_SNAPSHOT = (hour = HOUR) => `
   INSERT INTO platform_snapshot (platform, captured_hour, status, active_stores, trialing_stores,
-    past_due_stores, canceled_stores, expired_stores, list_mrr_minor, unpriced_subscriptions,
+    past_due_stores, canceled_stores, expired_stores, list_mrr_minor, unknown_plan_subscriptions,
     orders_ingested_live_24h, webhooks_processed_24h, webhooks_failed_24h, queue_depth, queue_stalled)
   VALUES ('demo', ${hour}, 'ok', 10, 2, 1, 0, 0, '4900.00', 0, 120, 500, 3, 4, 0)`;
 
@@ -125,7 +125,7 @@ describe('platform_snapshot', () => {
       'past_due_stores',
       'canceled_stores',
       'expired_stores',
-      'unpriced_subscriptions',
+      'unknown_plan_subscriptions',
       'orders_ingested_live_24h',
       'webhooks_processed_24h',
       'webhooks_failed_24h',

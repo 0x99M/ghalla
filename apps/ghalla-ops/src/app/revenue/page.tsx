@@ -18,8 +18,10 @@ export default async function RevenuePage() {
         List MRR {report.listMrrMinor} halalas · list ARR {report.listArrMinor} · {report.billedStores}{' '}
         billed stores
       </p>
-      {report.unpricedSubscriptions > 0 ? (
-        <p role="alert">{report.unpricedSubscriptions} subscriptions excluded: their plan has no list price.</p>
+      {report.unknownPlanSubscriptions > 0 ? (
+        <p role="alert">
+          {report.unknownPlanSubscriptions} subscriptions excluded: this build does not know their plan code.
+        </p>
       ) : null}
       <p>{report.seriesUnavailable}</p>
       <p>Last updated {report.capturedAt}</p>

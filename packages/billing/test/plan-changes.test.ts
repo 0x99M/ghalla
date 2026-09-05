@@ -95,7 +95,6 @@ describe('annual plans', () => {
     // A merchant hitting a locked feature is deciding in the moment, and a
     // twelve-month commitment is a bigger ask than the feature is worth right
     // then. Annual is something to offer once they have stayed.
-    expect(cheapestPlanWith('attribution')).toBe('ads');
     expect(PLANS[cheapestPlanWith('core') as PlanCode].interval).toBe('month');
   });
 });

@@ -63,7 +63,7 @@ export interface OverviewTotals {
   readonly pastDue: number;
   readonly listMrrMinor: Minor;
   readonly listArrMinor: Minor;
-  readonly unpricedSubscriptions: number;
+  readonly unknownPlanSubscriptions: number;
   readonly ordersIngested24h: number;
   readonly queueDepth: number;
   readonly stalledJobs: number;
@@ -89,7 +89,7 @@ export async function overview(registry: PlatformRegistry, now: Date): Promise<O
   let trialing = 0;
   let pastDue = 0;
   let annualised = 0;
-  let unpriced = 0;
+  let unknownPlans = 0;
   let ordersIngested24h = 0;
   let queueDepth = 0;
   let stalledJobs = 0;
@@ -107,7 +107,7 @@ export async function overview(registry: PlatformRegistry, now: Date): Promise<O
     // round once per platform, which is the same mistake as rounding once per
     // store, one level up.
     annualised += value.mrr.listArrMinor;
-    unpriced += value.mrr.unpricedPlans.reduce((sum, plan) => sum + plan.stores, 0);
+    unknownPlans += value.mrr.unknownPlans.reduce((sum, plan) => sum + plan.stores, 0);
     ordersIngested24h += value.ordersIngested24h;
     queueDepth += value.ingestion.pending;
     stalledJobs += value.ingestion.stalled;
@@ -128,7 +128,7 @@ export async function overview(registry: PlatformRegistry, now: Date): Promise<O
       pastDue,
       listMrrMinor: toMinor(toMonthlyRate(annualised)),
       listArrMinor: toMinor(annualised),
-      unpricedSubscriptions: unpriced,
+      unknownPlanSubscriptions: unknownPlans,
       ordersIngested24h,
       queueDepth,
       stalledJobs,

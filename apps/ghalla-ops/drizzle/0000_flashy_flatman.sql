@@ -31,7 +31,7 @@ CREATE TABLE "platform_snapshot" (
 	"canceled_stores" integer,
 	"expired_stores" integer,
 	"list_mrr_minor" numeric(14, 2),
-	"unpriced_subscriptions" integer,
+	"unknown_plan_subscriptions" integer,
 	"orders_ingested_live_24h" integer,
 	"webhooks_processed_24h" integer,
 	"webhooks_failed_24h" integer,
@@ -44,7 +44,7 @@ CREATE TABLE "platform_snapshot" (
 	CONSTRAINT "platform_snapshot_hour_aligned" CHECK ("platform_snapshot"."captured_hour" = date_trunc('hour', "platform_snapshot"."captured_hour" AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'),
 	CONSTRAINT "platform_snapshot_metrics_iff_ok" CHECK (("platform_snapshot"."status" = 'ok') = ("platform_snapshot"."active_stores" IS NOT NULL)),
 	CONSTRAINT "platform_snapshot_error_iff_unreachable" CHECK (("platform_snapshot"."status" = 'unreachable') = ("platform_snapshot"."error" IS NOT NULL)),
-	CONSTRAINT "platform_snapshot_counts_positive" CHECK (("platform_snapshot"."active_stores" IS NULL OR "platform_snapshot"."active_stores" >= 0) AND ("platform_snapshot"."trialing_stores" IS NULL OR "platform_snapshot"."trialing_stores" >= 0) AND ("platform_snapshot"."past_due_stores" IS NULL OR "platform_snapshot"."past_due_stores" >= 0) AND ("platform_snapshot"."canceled_stores" IS NULL OR "platform_snapshot"."canceled_stores" >= 0) AND ("platform_snapshot"."expired_stores" IS NULL OR "platform_snapshot"."expired_stores" >= 0) AND ("platform_snapshot"."unpriced_subscriptions" IS NULL OR "platform_snapshot"."unpriced_subscriptions" >= 0) AND ("platform_snapshot"."orders_ingested_live_24h" IS NULL OR "platform_snapshot"."orders_ingested_live_24h" >= 0) AND ("platform_snapshot"."webhooks_processed_24h" IS NULL OR "platform_snapshot"."webhooks_processed_24h" >= 0) AND ("platform_snapshot"."webhooks_failed_24h" IS NULL OR "platform_snapshot"."webhooks_failed_24h" >= 0) AND ("platform_snapshot"."queue_depth" IS NULL OR "platform_snapshot"."queue_depth" >= 0) AND ("platform_snapshot"."queue_stalled" IS NULL OR "platform_snapshot"."queue_stalled" >= 0))
+	CONSTRAINT "platform_snapshot_counts_positive" CHECK (("platform_snapshot"."active_stores" IS NULL OR "platform_snapshot"."active_stores" >= 0) AND ("platform_snapshot"."trialing_stores" IS NULL OR "platform_snapshot"."trialing_stores" >= 0) AND ("platform_snapshot"."past_due_stores" IS NULL OR "platform_snapshot"."past_due_stores" >= 0) AND ("platform_snapshot"."canceled_stores" IS NULL OR "platform_snapshot"."canceled_stores" >= 0) AND ("platform_snapshot"."expired_stores" IS NULL OR "platform_snapshot"."expired_stores" >= 0) AND ("platform_snapshot"."unknown_plan_subscriptions" IS NULL OR "platform_snapshot"."unknown_plan_subscriptions" >= 0) AND ("platform_snapshot"."orders_ingested_live_24h" IS NULL OR "platform_snapshot"."orders_ingested_live_24h" >= 0) AND ("platform_snapshot"."webhooks_processed_24h" IS NULL OR "platform_snapshot"."webhooks_processed_24h" >= 0) AND ("platform_snapshot"."webhooks_failed_24h" IS NULL OR "platform_snapshot"."webhooks_failed_24h" >= 0) AND ("platform_snapshot"."queue_depth" IS NULL OR "platform_snapshot"."queue_depth" >= 0) AND ("platform_snapshot"."queue_stalled" IS NULL OR "platform_snapshot"."queue_stalled" >= 0))
 );
 --> statement-breakpoint
 CREATE TABLE "store_snapshot" (

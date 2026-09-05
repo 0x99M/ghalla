@@ -223,6 +223,16 @@ export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
  * recorded at ingestion — provenance cannot be re-derived from a row after the
  * fact, which is why it is added now rather than when metering needs it.
  */
+/**
+ * How long one billing period lasts.
+ *
+ * Here rather than in `billing` because the ADAPTER boundary needs it too: a
+ * platform reports the interval of each plan it has configured, and the check
+ * that compares that against ours cannot have two lists to compare against.
+ */
+export const BILLING_INTERVALS = ['month', 'year'] as const;
+export type BillingInterval = (typeof BILLING_INTERVALS)[number];
+
 export const INGESTION_SOURCES = ['live', 'backfill'] as const;
 export type IngestionSource = (typeof INGESTION_SOURCES)[number];
 

@@ -1,4 +1,11 @@
-import type { Instant, PlatformId, SubscriptionStatus } from '@ghalla/contracts';
+import type {
+  BillingInterval,
+  CurrencyCode,
+  Instant,
+  Minor,
+  PlatformId,
+  SubscriptionStatus,
+} from '@ghalla/contracts';
 import type { PlatformCredentials } from './credentials.js';
 import type { WebhookDelivery, WebhookSecret, WebhookVerification } from './webhook.js';
 
@@ -84,6 +91,31 @@ export interface PlatformSubscription {
   readonly observedAt: Instant;
 }
 
+/**
+ * One plan as the PLATFORM has it configured.
+ *
+ * This exists so the local plan table can be ASSERTED equal to the platform's,
+ * rather than assumed equal to it. The two are separate systems edited by
+ * different people at different times: ours changes in a reviewed diff, theirs
+ * in a partner portal at 11pm. When they drift, entitlement and billing
+ * disagree — a merchant is charged for a tier the code will not give them, or
+ * given one they are not paying for — and neither side notices, because each is
+ * internally consistent.
+ *
+ * `planCode` is the ADAPTER's mapping, and `null` is a real answer: a plan
+ * configured at the platform that nothing here recognises. Guessing would be
+ * worse than saying so, because the guess would be the mapping.
+ */
+export interface PlatformPlan {
+  readonly platformPlanId: string;
+  /** Our neutral code, or `null` when the adapter cannot map this one. */
+  readonly planCode: string | null;
+  /** Excluding tax, in minor units, as the platform states it. */
+  readonly priceMinor: Minor;
+  readonly currency: CurrencyCode;
+  readonly interval: BillingInterval;
+}
+
 export interface BillingAdapter {
   readonly platform: PlatformId;
   /**
@@ -104,4 +136,16 @@ export interface BillingAdapter {
    * top of ours.
    */
   getSubscription(credentials: PlatformCredentials): Promise<PlatformSubscription>;
+  /**
+   * Every plan this app has configured at the platform.
+   *
+   * App-level rather than store-level, so it takes no credentials: the plans a
+   * partner publishes are a property of the app, not of any merchant.
+   *
+   * REQUIRED, not optional, and that is the point. The check it feeds is the
+   * only thing standing between a price edited in a partner portal and a
+   * merchant charged for a tier this code will not grant them, so an adapter
+   * that cannot answer it is an adapter whose plans cannot be verified.
+   */
+  listPlans(): Promise<readonly PlatformPlan[]>;
 }

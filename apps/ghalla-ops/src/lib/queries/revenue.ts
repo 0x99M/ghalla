@@ -22,7 +22,7 @@ export interface RevenueReport {
   readonly listMrrMinor: Minor;
   readonly listArrMinor: Minor;
   readonly billedStores: number;
-  readonly unpricedSubscriptions: number;
+  readonly unknownPlanSubscriptions: number;
   readonly byPlatform: readonly { readonly platform: PlatformId; readonly mrr: MrrBreakdown }[];
   readonly missing: readonly { readonly platform: PlatformId; readonly reason: string }[];
   /** Point-in-time history. `null` until the snapshot job writes `platform_snapshot`. */
@@ -49,8 +49,8 @@ export async function revenue(
     listMrrMinor: toMinor(toMonthlyRate(annualised)),
     listArrMinor: toMinor(annualised),
     billedStores: fan.ok.reduce((sum, result) => sum + result.value.billedStores, 0),
-    unpricedSubscriptions: fan.ok.reduce(
-      (sum, result) => sum + result.value.unpricedPlans.reduce((n, plan) => n + plan.stores, 0),
+    unknownPlanSubscriptions: fan.ok.reduce(
+      (sum, result) => sum + result.value.unknownPlans.reduce((n, plan) => n + plan.stores, 0),
       0,
     ),
     byPlatform: fan.ok.map((result) => ({ platform: result.platform, mrr: result.value })),

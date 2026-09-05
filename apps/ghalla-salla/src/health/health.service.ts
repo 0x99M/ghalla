@@ -4,14 +4,43 @@ import { readMigrationState } from '@ghalla/persistence';
 import type { Database, MigrationState } from '@ghalla/persistence';
 import { DRIZZLE } from '../db/db.module.js';
 import { MIGRATIONS_FOLDER } from './migrations-folder.js';
+import { PlanCatalogService } from '../billing/plan-catalog.service.js';
+import type { CatalogStatus } from '../billing/plan-catalog.service.js';
 
 export interface HealthReport {
   readonly status: 'ok' | 'degraded';
   readonly database: 'ok' | 'unreachable';
   readonly schema: MigrationState['status'];
   readonly migrations: { readonly applied: number; readonly expected: number };
+  /**
+   * Whether the plan table in this build agrees with the platform's.
+   *
+   * Reported here because this is the endpoint a deploy is gated on, and a
+   * price mismatch is exactly the class of fault that should stop a release:
+   * both systems keep working, and the merchant is charged for a tier the code
+   * will not grant them. See `PlanCatalogService`.
+   */
+  readonly plans: CatalogStatus;
   readonly environment: string | undefined;
   readonly commit: string | undefined;
+}
+
+/**
+ * Which catalog states may go green, and why the two red ones are red.
+ *
+ * `mismatch` is the whole point: the deploy that introduced it must not
+ * complete. `pending` is red only for the second or two before the startup
+ * check answers — if it were green, a deploy could pass its healthcheck on the
+ * first poll and never learn the answer, which would give the gate no teeth at
+ * all.
+ *
+ * `unverified` is GREEN, deliberately. It means no source is wired or the
+ * platform could not be reached, and neither is evidence of a fault on our
+ * side — failing on it would let a third party's outage block every deploy we
+ * make. It is loud in the body and in the log instead.
+ */
+export function isPlanCatalogAcceptable(status: CatalogStatus): boolean {
+  return status.state === 'ok' || status.state === 'unverified';
 }
 
 @Injectable()
@@ -19,6 +48,7 @@ export class HealthService {
   constructor(
     @Inject(DRIZZLE) private readonly db: Database,
     @Inject(MIGRATIONS_FOLDER) private readonly migrationsFolder: string,
+    private readonly plans: PlanCatalogService,
   ) {}
 
   /**
@@ -57,11 +87,17 @@ export class HealthService {
         ? await readMigrationState(this.db, this.migrationsFolder)
         : { expected: 0, applied: 0, latest: null, status: 'unknown' };
 
+    const plans = this.plans.current();
+
     return {
-      status: database === 'ok' && migrations.status === 'current' ? 'ok' : 'degraded',
+      status:
+        database === 'ok' && migrations.status === 'current' && isPlanCatalogAcceptable(plans)
+          ? 'ok'
+          : 'degraded',
       database,
       schema: migrations.status,
       migrations: { applied: migrations.applied, expected: migrations.expected },
+      plans,
       environment: env.railwayEnvironment,
       commit: env.gitSha,
     };

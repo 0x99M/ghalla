@@ -6,9 +6,9 @@ every derived metric, and the read API routes with unstyled scaffold pages. The
 snapshot job (5), the remaining alert types (6) and admin action proxying (7)
 are next.
 
-One thing is blocked on a decision rather than on work: **the list price of each
-monthly plan.** Until those numbers exist, every subscription reports as
-unpriced and list MRR reads zero — deliberately loud rather than quietly wrong.
+Prices are now set — see [0008](./0008-billing.md) — and they live in `PLANS`
+rather than in a map of their own, asserted against the platform's own catalog
+at startup and hourly. The portal reads them through `annualisedPrice`.
 
 A separate Railway service, reading every integration database at once. Each
 integration is its own service with its own Postgres, so a cross-platform
@@ -128,31 +128,24 @@ halalas in the domain and `numeric(14, 2)` in Postgres with one codec between �
 exactly, because a second set of habits in a second database is how two halves
 of one system start disagreeing about a number.
 
-### Prices have to live somewhere, and `plans.ts` refuses them
+### Prices live in `PLANS`, checked against the platform
 
-`packages/billing/src/plans.ts` says, in as many words, that prices are not
-there: the platform charges the merchant and is the only place an amount is
-authoritative, and a second copy would create two numbers that can disagree
-about what somebody owes. MRR needs a price anyway.
+`plans.ts` originally refused to hold prices, on the grounds that the platform
+is the only authoritative source. The premise was right and the conclusion was
+wrong — see [0008](./0008-billing.md). Prices are in the plan entries now,
+beside the cap and the features, and `comparePlanCatalog` asserts them equal to
+what the platform has configured.
 
-The resolution is a separate `LIST_PRICES` map in the same package, named for
-what it is. Nothing charges from it. What it produces is **list MRR** — what
-these subscriptions would bill at list price — and that label has to survive
-onto the screen, because it ignores discounts, coupons, proration, tax and
-failed collection. An operator who reads it as revenue will be wrong by
-whatever those add up to.
+What the portal produces is still **list MRR**: what these subscriptions bill at
+list price, ignoring discounts, proration, tax and failed collection. That label
+has to survive onto the screen, because an operator who reads it as revenue will
+be wrong by whatever those add up to.
 
-Two mechanisms keep it honest, covering two different failures:
-
-- `Record<PlanCode, Minor>` is **total**, so adding a plan without pricing it
-  does not compile;
-- the MRR query still reports `unpricedPlans`, for a plan code read from a
-  database that a newer deploy wrote and this build has never heard of. Without
-  it, that subscription silently leaves the sum and MRR appears to fall.
-
-**This is the one thing that is blocked on you: the list price for each of the
-four monthly plans.** Annual is derived at ten months' worth, per
-[0008](./0008-billing.md).
+Every known plan now has a price, so the only way a subscription leaves the
+total is a plan code this build does not recognise — a rollback to an older
+image, or a plan published after this deploy. The MRR query reports those as
+`unknownPlans` rather than dropping them, because a silent exclusion looks
+exactly like a fall in MRR that nobody can account for.
 
 ## Three metrics need data no integration records yet
 
@@ -260,13 +253,14 @@ produces two screens showing different numbers for the same thing.
 // lib/queries/mrr.ts
 //
 // Stores with status `active` or `past_due`. Trialing excluded — a trial is not
-// revenue. Annual plans divided by twelve. The plan is the EFFECTIVE one, via
-// `effectivePlanCode` from @ghalla/billing, so an agreed downgrade counts at
-// the tier still being paid for until the period it was paid for ends.
+// revenue. Prices come from PLANS via `annualisedPrice`, which multiplies a
+// MONTHLY plan by twelve rather than using the discounted annual figure. The
+// plan is the EFFECTIVE one, via `effectivePlanCode`, so an agreed downgrade
+// counts at the tier still being paid for until that period ends.
 export interface MrrBreakdown {
   readonly listMrrMinor: Minor;
   readonly byPlan: readonly { planCode: string; stores: number; listMrrMinor: Minor }[];
-  readonly unpricedPlans: readonly { planCode: string; stores: number }[];
+  readonly unknownPlans: readonly { planCode: string; stores: number }[];
 }
 export function mrr(handle: PlatformHandle, at: Instant): Promise<MrrBreakdown>;
 

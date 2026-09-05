@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
+import { BillingModule } from '../billing/billing.module.js';
 import { defaultMigrationsFolder } from '@ghalla/persistence';
 import { HealthController } from './health.controller.js';
 import { HealthService } from './health.service.js';
 import { MIGRATIONS_FOLDER } from './migrations-folder.js';
 
 @Module({
+  // For `PlanCatalogService`: the healthcheck is the deploy gate, and the plan
+  // catalog is one of the things it gates on.
+  imports: [BillingModule],
   controllers: [HealthController],
   providers: [
     HealthService,

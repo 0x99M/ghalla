@@ -212,8 +212,17 @@ describe('resolving entitlements', () => {
     // A bare 403 makes the merchant guess what to buy. Naming the tier turns a
     // dead end into a checkout link.
     expect(cheapestPlanWith('core')).toBe('starter');
-    expect(cheapestPlanWith('attribution')).toBe('ads');
-    expect(cheapestPlanWith('reports')).toBe('ads');
+  });
+
+  it('names NOTHING for a feature only an unpurchasable plan carries', () => {
+    // `ads` carries attribution, ltv and reports, and none of them are built —
+    // which is why it is not for sale. Offering it would send the merchant to a
+    // checkout that does not exist, for features that would not arrive. `null`
+    // is the honest answer, and the guard's 402 says "not yet" without naming a
+    // tier it cannot deliver.
+    expect(cheapestPlanWith('attribution')).toBeNull();
+    expect(cheapestPlanWith('reports')).toBeNull();
+    expect(cheapestPlanWith('ltv')).toBeNull();
   });
 
   it('answers null when no plan carries a feature', () => {

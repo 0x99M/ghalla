@@ -716,7 +716,10 @@ describe('the entitlements guard', () => {
       expect(body['error']).toBe('entitlement_required');
       expect(body['feature']).toBe('attribution');
       expect(body['currentPlan']).toBe('starter');
-      expect(body['requiredPlan']).toBe('ads');
+      // `null`, because the only plan carrying `attribution` is not for sale:
+      // its features are not built. Naming it would send the merchant to a
+      // checkout that does not exist for a feature that would not arrive.
+      expect(body['requiredPlan']).toBeNull();
       expect((error as EntitlementDeniedException).getStatus()).toBe(402);
     }
   });

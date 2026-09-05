@@ -3,15 +3,8 @@ import { SUBSCRIPTION_STATUSES, toMinor } from '@ghalla/contracts';
 import type { Instant, Minor, SubscriptionStatus } from '@ghalla/contracts';
 import { storeSubscription } from '@ghalla/persistence/schema';
 import { toInstantFromDateOrNull } from '@ghalla/persistence/codec';
-import {
-  LIST_PRICES,
-  annualisedListPrice,
-  effectivePlanCode,
-  isBilled,
-  isPlanCode,
-  toMonthlyRate,
-} from '@ghalla/billing';
-import type { ListPrices, PlanState } from '@ghalla/billing';
+import { annualisedPrice, effectivePlanCode, isBilled, isPlanCode, toMonthlyRate } from '@ghalla/billing';
+import type { PlanState } from '@ghalla/billing';
 import type { ReadOnlyDatabase } from '../platforms/read-only';
 
 /**
@@ -92,19 +85,18 @@ export interface MrrBreakdown {
   readonly billedStores: number;
   readonly byPlan: readonly PlanRevenue[];
   /**
-   * Subscriptions excluded from the total because this build cannot price their
-   * plan — either the price is not set yet, or a newer deploy wrote a plan code
-   * this one has never heard of. Reported rather than swallowed: the
-   * alternative is MRR appearing to fall for no reason anybody can find.
+   * Subscriptions excluded from the total because this build does not recognise
+   * their plan code — what a rollback to an older image looks like from here,
+   * or a plan published at the platform that this deploy predates.
+   *
+   * Reported rather than swallowed: the alternative is MRR appearing to fall
+   * for no reason anybody can find. Every KNOWN code has a price, so this is
+   * now the only way a subscription leaves the total.
    */
-  readonly unpricedPlans: readonly { readonly planCode: string; readonly stores: number }[];
+  readonly unknownPlans: readonly { readonly planCode: string; readonly stores: number }[];
 }
 
-export async function mrr(
-  db: ReadOnlyDatabase,
-  at: Instant,
-  prices: ListPrices = LIST_PRICES,
-): Promise<MrrBreakdown> {
+export async function mrr(db: ReadOnlyDatabase, at: Instant): Promise<MrrBreakdown> {
   const rows = await db
     .select({
       planCode: storeSubscription.planCode,
@@ -121,7 +113,7 @@ export async function mrr(
   // would round once per subscription, and a hundred annual subscribers would
   // then accumulate an error nobody can account for.
   const byPlanCode = new Map<string, { stores: number; annualised: number }>();
-  const unpricedByPlan = new Map<string, number>();
+  const unknownByPlan = new Map<string, number>();
 
   for (const row of rows) {
     const state: PlanState = {
@@ -132,12 +124,11 @@ export async function mrr(
     // The plan IN FORCE. An agreed downgrade still bills at the tier the
     // merchant paid for until the period they paid for runs out.
     const code = effectivePlanCode(state, at);
-    const annualised = isPlanCode(code) ? annualisedListPrice(code, prices) : null;
-
-    if (annualised === null) {
-      unpricedByPlan.set(code, (unpricedByPlan.get(code) ?? 0) + 1);
+    if (!isPlanCode(code)) {
+      unknownByPlan.set(code, (unknownByPlan.get(code) ?? 0) + 1);
       continue;
     }
+    const annualised = annualisedPrice(code);
     // One entry per plan holding both figures, rather than two maps keyed the
     // same way — the second lookup was a branch that could never miss.
     const entry = byPlanCode.get(code) ?? { stores: 0, annualised: 0 };
@@ -163,9 +154,10 @@ export async function mrr(
     listArrMinor: toMinor(totalAnnualised),
     billedStores: rows.length,
     byPlan,
-    unpricedPlans: [...unpricedByPlan.entries()]
-      .map(([planCode, stores]) => ({ planCode, stores }))
-      .sort((a, b) => b.stores - a.stores),
+    // Insertion order, not sorted. `byPlan` is a revenue breakdown somebody
+    // reads down; this is a short list of codes that should be empty, and
+    // ordering it would be decoration with a comparator to maintain.
+    unknownPlans: [...unknownByPlan.entries()].map(([planCode, stores]) => ({ planCode, stores })),
   };
 }
 

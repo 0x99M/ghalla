@@ -32,6 +32,7 @@ export type {
   BillingAdapter,
   BillingEvent,
   BillingEventType,
+  PlatformPlan,
   PlatformSubscription,
   SubscriptionFacts,
 } from './billing-adapter.js';
