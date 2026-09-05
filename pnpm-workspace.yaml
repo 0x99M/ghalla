@@ -1,0 +1,17 @@
+packages:
+  - 'packages/*'
+  - 'apps/*'
+  - 'tooling/*'
+
+# A package may only resolve what it itself declares. This is boundary layer L1:
+# `import { Client } from '@some/platform-sdk'` inside packages/core is
+# unresolvable at type-check, test and runtime — and no eslint-disable reaches it.
+nodeLinker: isolated
+hoist: false
+publicHoistPattern: []
+strictPeerDependencies: true
+linkWorkspacePackages: true
+minimumReleaseAgeExclude:
+  - eslint@10.10.0
+allowBuilds:
+  unrs-resolver: true

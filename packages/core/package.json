@@ -1,0 +1,28 @@
+{
+  "name": "@ghalla/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The profit engine. Pure: no I/O, no clock, no randomness.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --passWithNoTests",
+    "clean": "rm -rf dist"
+  },
+  "//dependencies": "Exactly one. Adding a second is an architecture decision, not a chore.",
+  "dependencies": {
+    "@ghalla/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@ghalla/tsconfig": "workspace:*",
+    "typescript": "6.0.3",
+    "vitest": "5.0.0"
+  }
+}

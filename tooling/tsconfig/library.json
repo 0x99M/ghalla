@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Ghalla pure library (contracts / core / ports)",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["ES2024"],
+    "types": [],
+    "erasableSyntaxOnly": true
+  }
+}

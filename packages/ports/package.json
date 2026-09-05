@@ -1,0 +1,25 @@
+{
+  "name": "@ghalla/ports",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Interfaces every platform adapter must implement. No platform vocabulary.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@ghalla/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@ghalla/tsconfig": "workspace:*",
+    "typescript": "6.0.3"
+  }
+}

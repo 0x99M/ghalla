@@ -1,0 +1,18 @@
+{
+  "//": [
+    "Type-checks the tests, which the build config deliberately excludes from dist.",
+    "rootDir is relaxed to the package root ONLY because this config emits nothing.",
+    "The build config keeps rootDir at ./src, where it is a boundary layer: a relative",
+    "escape into another package raises TS6059 at build time."
+  ],
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

@@ -1,0 +1,10 @@
+{
+  "//": "Solution file. Emits nothing itself; `tsc -b` walks the references.",
+  "files": [],
+  "references": [
+    { "path": "./packages/contracts" },
+    { "path": "./packages/ports" },
+    { "path": "./packages/core" },
+    { "path": "./packages/schemas" }
+  ]
+}

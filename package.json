@@ -1,0 +1,42 @@
+{
+  "name": "ghalla",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "type": "module",
+  "description": "Profit analytics for e-commerce merchants \u2014 know your real profit.",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^24.14.0",
+      "onFail": "warn"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.25.0",
+      "onFail": "error"
+    }
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "tsc -b tsconfig.json && turbo run typecheck",
+    "lint": "eslint . --max-warnings=0",
+    "arch": "pnpm run arch:graph && pnpm run arch:vocab",
+    "arch:graph": "depcruise --config .dependency-cruiser.mjs packages tooling",
+    "arch:vocab": "./scripts/no-platform-vocab.sh",
+    "verify": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run arch",
+    "clean": "turbo run clean && rm -rf node_modules/.cache .turbo"
+  },
+  "devDependencies": {
+    "@ghalla/eslint-config": "workspace:*",
+    "@ghalla/tsconfig": "workspace:*",
+    "dependency-cruiser": "18.2.0",
+    "eslint": "10.10.0",
+    "turbo": "2.10.12",
+    "typescript": "6.0.3"
+  }
+}

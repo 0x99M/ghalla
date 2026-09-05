@@ -1,0 +1,33 @@
+{
+  "name": "@ghalla/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Canonical, platform-neutral domain types. Zero runtime dependencies, by contract.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ingest": {
+      "types": "./dist/ingest.d.ts",
+      "default": "./dist/ingest.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p tsconfig.test.json"
+  },
+  "//dependencies": "MUST stay empty. The zero-dep line is enforced by .dependency-cruiser.mjs, not by good intentions.",
+  "dependencies": {},
+  "devDependencies": {
+    "@ghalla/tsconfig": "workspace:*",
+    "typescript": "6.0.3",
+    "vitest": "5.0.0"
+  }
+}

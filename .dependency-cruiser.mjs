@@ -1,0 +1,105 @@
+/**
+ * Boundary layer L5 — the graph check.
+ *
+ * Catches what `no-restricted-imports` structurally cannot: dynamic `import()`,
+ * and transitive reach. Runs in CI at severity "error" (non-zero exit).
+ *
+ * Note: dependency-cruiser's `dependencyTypes: ["core"]` means a *Node core
+ * module*. It has nothing to do with packages/core.
+ */
+export default {
+  forbidden: [
+    {
+      name: 'contracts-is-a-leaf',
+      comment:
+        '@ghalla/contracts depends on nothing. Zero runtime deps is the property that keeps a ' +
+        'validator out of the pure engine graph.',
+      severity: 'error',
+      from: { path: '^packages/contracts/src' },
+      to: { pathNot: '^packages/contracts/src', dependencyTypesNot: ['type-only'] },
+    },
+    {
+      name: 'core-reaches-contracts-only',
+      comment: 'packages/core may import @ghalla/contracts and itself. Nothing else, ever.',
+      severity: 'error',
+      from: { path: '^packages/core/src' },
+      to: { pathNot: '^(packages/core/src|packages/contracts)' },
+    },
+    {
+      name: 'ports-reaches-contracts-only',
+      severity: 'error',
+      from: { path: '^packages/ports/src' },
+      to: { pathNot: '^(packages/ports/src|packages/contracts)' },
+    },
+    {
+      name: 'pure-layer-has-no-io',
+      comment: 'No Node builtin in contracts / core / ports. The pure layer performs no I/O.',
+      severity: 'error',
+      from: { path: '^packages/(contracts|core|ports)/src' },
+      to: { dependencyTypes: ['core'] },
+    },
+    {
+      name: 'raw-payload-stays-at-the-edge',
+      comment:
+        'Ingested<T> carries the raw platform payload, which is exactly where PDPL-forbidden ' +
+        'customer data lives. Only the adapter boundary may see it.',
+      severity: 'error',
+      // Matches both the source file and the built entry point: a dependent
+      // package resolves `@ghalla/contracts/ingest` through dist, not src.
+      from: { pathNot: '^(packages/ports|apps)/' },
+      to: { path: '^packages/contracts/(src|dist)/ingest\\.' },
+    },
+    {
+      name: 'packages-never-import-apps',
+      comment: 'The dependency arrow points one way. A shared package that knows about an app is not shared.',
+      severity: 'error',
+      from: { path: '^packages/' },
+      to: { path: '^apps/' },
+    },
+    {
+      name: 'no-circular',
+      severity: 'error',
+      from: {},
+      to: { circular: true },
+    },
+    {
+      name: 'no-orphans',
+      severity: 'warn',
+      from: { orphan: true, pathNot: ['\\.d\\.ts$', '(^|/)\\.[^/]+\\.(js|cjs|mjs|ts)$', '(^|/)tsconfig\\.json$'] },
+      to: {},
+    },
+    {
+      name: 'not-to-unresolvable',
+      severity: 'error',
+      from: {},
+      to: { couldNotResolve: true },
+    },
+    {
+      name: 'no-undeclared-deps',
+      comment:
+        'An import that is not in that package.json is the failure mode pnpm isolated linking ' +
+        'exists to prevent. Assert it in CI too, so a hoisting change cannot quietly enable it.',
+      severity: 'error',
+      from: { path: '^(packages|apps)/' },
+      to: { dependencyTypes: ['npm-no-pkg', 'npm-unknown'] },
+    },
+  ],
+  options: {
+    // `dist` is NOT excluded: a workspace import resolves through a package's
+    // built entry point, so excluding it made every cross-package edge invisible
+    // and silently disarmed the rules above. It is `doNotFollow` instead — the
+    // edge into it is recorded, its interior is not walked.
+    doNotFollow: { path: '(node_modules|/dist/)' },
+    exclude: { path: '(\\.test\\.ts$|\\.spec\\.ts$|/test/)' },
+    tsPreCompilationDeps: true,
+    tsConfig: { fileName: 'tsconfig.json' },
+    enhancedResolveOptions: {
+      exportsFields: ['exports'],
+      conditionNames: ['import', 'require', 'node', 'default', 'types'],
+      extensions: ['.ts', '.js', '.mjs'],
+    },
+    reporterOptions: {
+      text: { highlightFocused: true },
+    },
+  },
+};
