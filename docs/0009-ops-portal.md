@@ -483,3 +483,105 @@ checked against the code and did not survive.
 - **Route handlers hold no logic** — parse, delegate to `lib/`, respond. That is
   the rule the coverage exclusions for `src/app/**` and `middleware.ts` depend
   on. A route that starts making decisions comes back into coverage with it.
+
+---
+
+## UI layer
+
+Built from `design_handoff_ghalla_ops/`. Backend contracts unchanged: no query
+was edited, no metric redefined, no API schema widened.
+
+### Where things live, and why
+
+`src/lib/ui/` holds every judgement a screen makes — which severity a row is,
+how a duration reads, what a funnel step means when nothing measures it. It is
+tested. `src/app/_components/` holds markup and is excluded from coverage under
+the rule that already excludes `src/app/**`: those files hold no decisions. The
+split is what keeps a 99% gate meaningful once a UI exists; the alternative —
+excluding a new `components/` directory — would move the number without moving
+the guarantee.
+
+Design tokens are Tailwind v4 `@theme` entries in `src/app/globals.css`. In v4
+there is no `tailwind.config.ts`; that block *is* the config, and every token
+becomes a utility, so no component carries a hex literal.
+
+Fonts are self-hosted through `next/font/google`. The handoff loads them from
+the CDN; on this console that is a render-blocking third-party request in front
+of an incident screen, and a font that fails to arrive re-measures every column
+in a layout whose whole argument is that figures line up.
+
+### Fixtures
+
+`OPS_DATA_SOURCE=fixtures` switches the whole console, read only inside
+`lib/data`. **Live is the default**: an unset variable in production must error
+about an unreachable database, never serve invented figures.
+
+Store fixtures are built by running facts through the real `storeHealth` and
+`activation` functions rather than declaring flags, so a fixture row cannot
+claim a state the rules would not produce. The aggregate reports derive from
+those stores through the same pure functions the live path uses — `storeAlerts`,
+`sortAlerts`, `matchesFilter`, `sortStores`, `paginate`, `effectivePlanCode`,
+`annualisedPrice`. A sidebar badge counting six alerts beside a feed showing
+four is therefore unrepresentable.
+
+Edge states are URL flags, honoured only on fixtures: `?alertsClear=1`,
+`?zeroStores=1`, `?railState=loading|failed`.
+
+### What the design asks for that no data supports
+
+Rendered as a stated reason, never as an empty chart — an empty chart says "no
+revenue", and the truth is "no history yet".
+
+| Element | Why it is missing |
+| --- | --- |
+| MRR over time, trial→paid conversion, cohort retention | need point-in-time history; the snapshot job that fills `platform_snapshot` is not built |
+| Webhook sparklines, 36-column queue chart | same |
+| Nightly reconciliation trend | the integration counts corrections as a metric, not as rows the portal can read |
+| Signature failures | verification happens before persistence, so a rejected delivery is never recorded |
+| Dropped stale events | the stale-event guard discards before persisting |
+| Platform API error rate, 429 rate | adapter HTTP outcomes are not persisted anywhere |
+| Per-store received/processed/failed | `IngestionHealth` is per platform; there is no per-store equivalent |
+| SKUs missing cost, estimated shipping/fees | need a per-SKU cost join the portal does not run |
+| Plan history | the portal reads current subscription state only |
+| MRR delta chip | needs a previous month |
+| Backfill percentage | `backfill_cursors` records items fetched, never the total; the bar shows activity and says so |
+
+### Deviations, with reasons
+
+- **Store names.** Neither `CanonicalStore` nor the `stores` table carries a
+  name or domain, so every screen shows `platformStoreId` in the slot the design
+  gives the name. `name` is on the PII deny-list, so the field wants to be
+  `storeName` — the precedent `CanonicalOrderItem.productName` already set.
+  One component, `StoreRef`, is the only place this is rendered.
+- **⌘K palette.** Deferred: it searches by a name that does not exist. The key
+  and the sidebar card navigate to the store list meanwhile.
+- **Health nav badge.** The handoff shows `3` with no definition behind it. It
+  counts unacknowledged alerts, the only alert count this model defines.
+- **Muted text** is `#5A6070`, the README's stated 4.5:1 floor, not the
+  `#6B7280` the prototype's inline styles use — which is lighter than the floor
+  the same document sets, and disagrees with the prototype's own constant.
+- **Over cap** is presentation, not a `HealthFlag`. Exceeding a soft cap is a
+  merchant outgrowing their tier, not a fault; adding it to the health model
+  would make it alert.
+- **Churned stores** read muted, not red. `isLive` already excludes them from
+  every health rule, so a red row would sit outside the needs-attention filter,
+  which filters on `health.healthy`.
+- **Queue progress bar.** Nothing records what has been resolved, so rows carry
+  their share of affected order volume instead — the number that decides what to
+  do first.
+- **"Show cached (2h old)"** is not offered. The cache holds one entry per key
+  with a TTL; the only thing it could show is the failure already on screen.
+
+### Writes
+
+Two exist. Acknowledging an alert writes `alert_ack`, a portal-owned table —
+allowed, and live. Every operator action on the store detail page dispatches to
+an integration's admin API, which is not built; the panel and its confirm dialog
+are complete and the primary button is disabled with the reason stated. The
+read-only Postgres role means nothing here could write to an integration even if
+this code tried.
+
+### Additions
+
+`POST /api/refresh` clears the aggregate cache. Without it `router.refresh()`
+returns the same cached numbers and the refresh button appears to do nothing.

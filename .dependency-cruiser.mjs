@@ -94,6 +94,7 @@ export default {
           '^apps/ghalla-ops/src/app/',
           '^apps/ghalla-ops/src/middleware\\.ts$',
           '^apps/ghalla-ops/(next|drizzle|vitest)\\.config\\.ts$',
+          '^apps/ghalla-ops/postcss\\.config\\.mjs$',
         ],
       },
       to: {},
@@ -131,7 +132,11 @@ export default {
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'node', 'default', 'types'],
-      extensions: ['.ts', '.js', '.mjs'],
+      // `.tsx` is here because the console's components are TSX. Without it
+      // every relative import between two components resolves to nothing and
+      // depcruise reports the whole UI as unresolvable — which reads as a
+      // boundary violation when it is a resolver gap.
+      extensions: ['.ts', '.tsx', '.js', '.mjs'],
     },
     reporterOptions: {
       text: { highlightFocused: true },

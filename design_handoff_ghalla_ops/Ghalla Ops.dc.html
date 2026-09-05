@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#EDEEF3; font-family:'Montserrat',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#4A4ECB; text-decoration:none; }
+  a:hover { color:#3A3D9E; text-decoration:underline; }
+  * { box-sizing:border-box; }
+  @keyframes shimmer { 0% { background-position:-320px 0 } 100% { background-position:320px 0 } }
+  input::placeholder { color:#A6ABBA; }
+  ::selection { background:#EFF0F5; color:#1F2430; }
+  @keyframes spin { to { transform:rotate(360deg) } }
+  @keyframes fadein { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:none } }
+</style>
+</helmet>
+
+<div style="width:1440px;min-height:1024px;display:flex;background:#F5F6FA;color:#1F2430;font-variant-numeric:tabular-nums;font-size:13px">
+
+  <!-- ── sidebar ───────────────────────────────────────────── -->
+  <div style="width:212px;flex:0 0 212px;background:#FBFBFD;color:#1F2430;border-right:1px solid #EDEEF3;display:flex;flex-direction:column;padding:18px 14px">
+    <div style="display:flex;align-items:center;gap:9px;padding:0 4px 16px 4px;border-bottom:1px solid #EDEEF3">
+      <div style="width:30px;height:30px;border-radius:11px;background:#1F2430;color:#FBFBFD;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">G</div>
+      <div>
+        <div style="font-weight:800;font-size:15px;letter-spacing:-0.01em;line-height:1">GHALLA</div>
+        <div style="font-size:9.5px;letter-spacing:.16em;color:#6B7280;font-weight:700;margin-top:3px">OPS CONSOLE</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:2px;padding-top:10px">
+      <div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:11px 10px 5px 10px">Monitor</div>
+      <div onClick="{{ goOverview }}" style="position:relative;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:12px;cursor:pointer;font-size:13px;font-weight:{{ navOverviewW }};color:{{ navOverviewC }}" style-hover="background:#EDEEF3">
+        <sc-if value="{{ atOverview }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;background:#EEF0FD;border-radius:12px"></div></sc-if>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ navOverviewC }}" stroke-width="2" style="position:relative"><path d="M3 12l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        <span style="position:relative">Overview</span>
+      </div>
+      <div onClick="{{ goStores }}" style="position:relative;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:12px;cursor:pointer;font-size:13px;font-weight:{{ navStoresW }};color:{{ navStoresC }}" style-hover="background:#EDEEF3">
+        <sc-if value="{{ atStores }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#EEF0FD;border-radius:12px"></div></sc-if>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ navStoresC }}" stroke-width="2" style="position:relative"><path d="M3 7h18v13H3z"/><path d="M3 11h18"/><path d="M9 11v9"/></svg>
+        <span style="position:relative">Stores</span>
+        <span style="position:relative;margin-left:auto;font-family:'Montserrat',sans-serif;font-size:11px;color:#6B7280">312</span>
+      </div>
+      <div onClick="{{ goHealth }}" style="position:relative;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:12px;cursor:pointer;font-size:13px;font-weight:{{ navHealthW }};color:{{ navHealthC }}" style-hover="background:#EDEEF3">
+        <sc-if value="{{ atHealth }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#EEF0FD;border-radius:12px"></div></sc-if>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ navHealthC }}" stroke-width="2" style="position:relative"><path d="M3 12h4l2-5 3 10 2-5h7"/></svg>
+        <span style="position:relative">Health</span>
+        <span style="position:relative;margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:17px;padding:0 5px;border-radius:11px;background:#D92D20;color:#FFFFFF;font-size:10.5px;font-weight:800">3</span>
+      </div>
+      <div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:11px 10px 5px 10px">Business</div>
+      <div onClick="{{ goRevenue }}" style="position:relative;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:12px;cursor:pointer;font-size:13px;font-weight:{{ navRevenueW }};color:{{ navRevenueC }}" style-hover="background:#EDEEF3">
+        <sc-if value="{{ atRevenue }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#EEF0FD;border-radius:12px"></div></sc-if>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ navRevenueC }}" stroke-width="2" style="position:relative"><path d="M4 18V9"/><path d="M10 18V5"/><path d="M16 18v-6"/><path d="M21 18H3"/></svg>
+        <span style="position:relative">Revenue</span>
+      </div>
+      <div onClick="{{ goQueues }}" style="position:relative;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:12px;cursor:pointer;font-size:13px;font-weight:{{ navQueuesW }};color:{{ navQueuesC }}" style-hover="background:#EDEEF3">
+        <sc-if value="{{ atQueues }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#EEF0FD;border-radius:12px"></div></sc-if>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ navQueuesC }}" stroke-width="2" style="position:relative"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>
+        <span style="position:relative">Review queues</span>
+        <span style="position:relative;margin-left:auto;font-size:11px;color:#6B7280">10</span>
+      </div>
+      <div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:11px 10px 5px 10px">Views</div>
+      <div onClick="{{ goMobile }}" style="position:relative;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:12px;cursor:pointer;font-size:13px;font-weight:{{ navMobileW }};color:{{ navMobileC }}" style-hover="background:#EDEEF3">
+        <sc-if value="{{ atMobile }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#EEF0FD;border-radius:12px"></div></sc-if>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ navMobileC }}" stroke-width="2" style="position:relative"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></svg>
+        <span style="position:relative">Narrow overview</span>
+      </div>
+    </div>
+
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+      <div onClick="{{ openPalette }}" style="border:1px solid #EDEEF3;border-radius:14px;padding:10px 11px;cursor:pointer;background:#EDEEF3" style-hover="border-color:#1F2430">
+        <div style="display:flex;align-items:center;gap:7px;color:#6B7280;font-size:12px;font-weight:600">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A6ABBA" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          Jump to store
+          <span style="margin-left:auto;font-family:'Montserrat',sans-serif;font-size:10.5px;background:#EDEEF3;color:#1F2430;padding:2px 5px;border-radius:5px;font-weight:600">⌘K</span>
+        </div>
+      </div>
+      <div style="border-top:1px solid #EDEEF3;padding-top:11px;display:flex;align-items:center;gap:8px">
+        <div style="width:26px;height:26px;border-radius:8px;background:#EDEEF3;color:#1F2430;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px">AK</div>
+        <div style="line-height:1.25">
+          <div style="font-size:12px;font-weight:700">Operator</div>
+          <div style="font-size:10.5px;color:#6B7280">Amman · UTC+3</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── main ──────────────────────────────────────────────── -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+
+    <!-- topbar -->
+    <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;background:#FFFFFF;color:#1F2430;border-bottom:1px solid #EFF0F5">
+      <div style="min-width:0">
+        <div style="font-size:18px;font-weight:800;letter-spacing:-0.02em;line-height:1.1">{{ screenTitle }}</div>
+        <div style="font-size:11.5px;color:#6B7280;margin-top:3px">{{ screenSub }}</div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <div style="display:flex;background:#EFF0F5;border:1px solid #EFF0F5;border-radius:12px;padding:2px">
+          <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="4">
+            <div onClick="{{ r.pick }}" style="padding:5px 11px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;color:{{ r.fg }};background:{{ r.bg }}">{{ r.t }}</div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 10px 6px 11px;border:1px solid #EFF0F5;border-radius:12px">
+          <span style="font-size:11px;color:#6B7280">Updated</span>
+          <span style="font-size:11.5px;font-weight:700;font-family:'Montserrat',sans-serif">{{ updatedAgo }}</span>
+          <div onClick="{{ refresh }}" title="Manual refresh — nothing on this console auto-refreshes" style="cursor:pointer;display:flex;padding:3px;border-radius:6px" style-hover="background:#EFF0F5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1F2430" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:16px 20px 26px 20px;display:flex;flex-direction:column;gap:14px">
+
+      <!-- ══ OVERVIEW ══ -->
+      <sc-if value="{{ atOverview }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- health strip -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+          <sc-for list="{{ platforms }}" as="p" hint-placeholder-count="4">
+            <div style="background:{{ p.cardBg }};border:1px solid {{ p.cardBorder }};border-radius:18px;padding:12px 13px;color:#1F2430">
+              <div style="display:flex;align-items:center;gap:7px">
+                <div style="width:7px;height:7px;border-radius:50%;background:{{ p.dot }};box-shadow:0 0 0 3px {{ p.dotHalo }}"></div>
+                <div style="font-weight:800;font-size:13px">{{ p.name }}</div>
+                <div style="margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.07em;color:{{ p.stateFg }};background:{{ p.stateBg }};padding:2px 6px;border-radius:5px">{{ p.state }}</div>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:12px;margin-top:11px">
+                <div>
+                  <div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:700">Webhook 24h</div>
+                  <div style="font-size:19px;font-weight:800;letter-spacing:-0.02em;margin-top:2px;font-family:'Montserrat',sans-serif">{{ p.hook }}</div>
+                </div>
+                <div style="display:flex;align-items:flex-end;gap:2px;height:30px;margin-left:auto;margin-bottom:2px">
+                  <sc-for list="{{ p.spark }}" as="h" hint-placeholder-count="14">
+                    <div style="width:4px;border-radius:2px;background:{{ p.sparkColor }};height:{{ h }}px"></div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;gap:14px;margin-top:11px;padding-top:9px;border-top:1px solid #EFF0F5">
+                <div><span style="font-size:10.5px;color:#6B7280">Queue </span><span style="font-size:12.5px;font-weight:700;font-family:'Montserrat',sans-serif">{{ p.queue }}</span></div>
+                <div><span style="font-size:10.5px;color:#6B7280">Failed </span><span style="font-size:12.5px;font-weight:700;font-family:'Montserrat',sans-serif;color:{{ p.failFg }}">{{ p.failed }}</span></div>
+                <div style="margin-left:auto"><span style="font-size:10.5px;color:#6B7280" title="{{ p.absolute }}">{{ p.lag }}</span></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 372px;gap:14px;align-items:start">
+
+          <!-- alert feed -->
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+            <div style="display:flex;align-items:center;gap:9px;padding:12px 14px;border-bottom:1px solid #EFF0F5">
+              <div style="font-size:14px;font-weight:800">Alerts</div>
+              <sc-if value="{{ hasAlerts }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size:10.5px;font-weight:800;color:#B42318;background:#FEE4E2;padding:2px 7px;border-radius:6px">6 ACTIVE</div>
+              </sc-if>
+              <div style="margin-left:auto;font-size:11px;color:#6B7280">Sorted by severity · click to open the store</div>
+            </div>
+
+            <sc-if value="{{ hasAlerts }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <sc-for list="{{ alerts }}" as="a" hint-placeholder-count="6">
+                  <div onClick="{{ a.open }}" style="display:flex;align-items:center;gap:11px;padding:11px 14px;border-bottom:1px solid #F2F3F7;cursor:pointer;border-left:3px solid {{ a.bar }}" style-hover="background:#F7F8FB">
+                    <div style="width:24px;height:24px;flex:0 0 24px;border-radius:7px;background:{{ a.iconBg }};color:{{ a.iconFg }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;font-family:'Montserrat',sans-serif">{{ a.glyph }}</div>
+                    <div style="min-width:0;flex:1">
+                      <div style="font-size:13px;font-weight:700;letter-spacing:-0.01em">{{ a.title }}</div>
+                      <div style="font-size:11.5px;color:#6B7280;margin-top:2px">{{ a.detail }}</div>
+                    </div>
+                    <div style="text-align:right;flex:0 0 auto">
+                      <div style="font-size:12px;font-weight:700">{{ a.store }}</div>
+                      <div style="font-size:11px;color:#6B7280;margin-top:2px" title="{{ a.absolute }}">{{ a.when }}</div>
+                    </div>
+                    <div style="font-size:10px;font-weight:800;letter-spacing:.07em;color:{{ a.sevFg }};background:{{ a.sevBg }};padding:3px 7px;border-radius:6px;flex:0 0 auto">{{ a.sev }}</div>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A6ABBA" stroke-width="2" style="flex:0 0 14px"><path d="M9 5l7 7-7 7"/></svg>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ alertsClear }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:34px 14px;display:flex;align-items:center;gap:14px;justify-content:center">
+                <div style="width:38px;height:38px;border-radius:14px;background:#DCFCE7;display:flex;align-items:center;justify-content:center">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <div>
+                  <div style="font-size:15px;font-weight:800">All clear across Salla and Zid</div>
+                  <div style="font-size:12px;color:#6B7280;margin-top:3px">312 stores ingesting, 0 stuck backfills, 0 jobs over threshold. Last alert cleared 14h ago.</div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- right rail -->
+          <div style="display:flex;flex-direction:column;gap:14px">
+
+            <sc-if value="{{ railNormal }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div style="background:#4A4ECB;border-radius:14px;padding:14px;color:#FFFFFF">
+                <div style="display:flex;align-items:center">
+                  <div style="font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:#E8E9FD">Recurring revenue · SAR</div>
+                  <div style="margin-left:auto;font-size:10.5px;font-weight:800;background:#EEF0FD;color:#3A3D9E;padding:2px 6px;border-radius:5px">+4.8%</div>
+                </div>
+                <div style="font-size:32px;font-weight:800;letter-spacing:-0.03em;margin-top:8px;font-family:'Montserrat',sans-serif">48,120</div>
+                <div style="font-size:11.5px;color:#E8E9FD;margin-top:2px">+2,210 vs last month</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:13px;padding-top:11px;border-top:1px solid #6B6FE3">
+                  <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#E8E9FD;font-weight:700">Paid</div><div style="font-size:16px;font-weight:800;font-family:'Montserrat',sans-serif;margin-top:2px">184</div></div>
+                  <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#E8E9FD;font-weight:700">Trialing</div><div style="font-size:16px;font-weight:800;font-family:'Montserrat',sans-serif;margin-top:2px">37</div></div>
+                  <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#E8E9FD;font-weight:700">Past due</div><div style="font-size:16px;font-weight:800;font-family:'Montserrat',sans-serif;margin-top:2px;color:#B42318">6</div></div>
+                </div>
+              </div>
+
+              <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05);padding:13px 14px">
+                <div style="display:flex;align-items:center">
+                  <div style="font-size:13px;font-weight:800">Activation funnel</div>
+                  <div style="margin-left:auto;font-size:10.5px;color:#6B7280">last 30d cohort</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+                  <sc-for list="{{ funnel }}" as="f" hint-placeholder-count="5">
+                    <div>
+                      <div style="display:flex;align-items:baseline;gap:8px">
+                        <div style="font-size:11.5px;font-weight:600;color:#1F2430">{{ f.step }}</div>
+                        <div style="margin-left:auto;font-size:12.5px;font-weight:800;font-family:'Montserrat',sans-serif">{{ f.n }}</div>
+                        <div style="font-size:10.5px;font-weight:700;color:{{ f.dropFg }};width:44px;text-align:right">{{ f.drop }}</div>
+                      </div>
+                      <div style="height:7px;background:#EFF0F5;border-radius:4px;margin-top:4px;overflow:hidden">
+                        <div style="height:7px;border-radius:4px;background:{{ f.fill }};width:{{ f.w }}"></div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ railLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05);padding:14px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:12px;height:12px;border:2px solid #E6E8EF;border-top-color:#1F2430;border-radius:50%;animation:spin 0.9s linear infinite"></div>
+                  <div style="font-size:11.5px;font-weight:700;color:#6B7280">Loading billing database…</div>
+                </div>
+                <div style="height:34px;border-radius:8px;margin-top:12px;background:linear-gradient(90deg,#EFF0F5 25%,#E7EFEE 37%,#EFF0F5 63%);background-size:320px 100%;animation:shimmer 1.3s linear infinite"></div>
+                <div style="height:14px;width:60%;border-radius:6px;margin-top:8px;background:linear-gradient(90deg,#EFF0F5 25%,#E7EFEE 37%,#EFF0F5 63%);background-size:320px 100%;animation:shimmer 1.3s linear infinite"></div>
+                <div style="height:74px;border-radius:8px;margin-top:8px;background:linear-gradient(90deg,#EFF0F5 25%,#E7EFEE 37%,#EFF0F5 63%);background-size:320px 100%;animation:shimmer 1.3s linear infinite"></div>
+                <div style="font-size:11px;color:#6B7280;margin-top:10px">Alerts and platform health above loaded independently.</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ railFailed }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#FFFFFF;border:1px solid #FECDCA;border-radius:18px;padding:14px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div style="width:22px;height:22px;border-radius:7px;background:#FEE4E2;color:#B42318;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px">!</div>
+                  <div style="font-size:13px;font-weight:800">Revenue section unavailable</div>
+                </div>
+                <div style="font-size:11.5px;color:#6B7280;margin-top:8px;line-height:1.5">The billing database did not respond in 5s. The rest of this page is live and current — only these two cards are stale.</div>
+                <div style="font-family:'Montserrat',sans-serif;font-size:10.5px;color:#B42318;background:#FEF3F2;border-radius:8px;padding:7px 9px;margin-top:9px">ETIMEDOUT billing.pg · 14:22 Asia/Amman</div>
+                <div style="display:flex;gap:7px;margin-top:10px">
+                  <div style="font-size:11.5px;font-weight:700;color:#FFFFFF;background:#5B5FE0;padding:6px 11px;border-radius:8px;cursor:pointer" style-hover="background:#1F2430">Retry section</div>
+                  <div style="font-size:11.5px;font-weight:700;color:#1F2430;border:1px solid #EFF0F5;padding:6px 11px;border-radius:8px;cursor:pointer" style-hover="background:#EFF0F5">Show cached (2h old)</div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+
+        <!-- installs / churns -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+            <div style="display:flex;align-items:center;padding:11px 14px;border-bottom:1px solid #EFF0F5">
+              <div style="font-size:13px;font-weight:800">Recent installs</div>
+              <div style="margin-left:auto;font-size:11px;color:#6B7280">9 this week · times in Asia/Amman</div>
+            </div>
+            <sc-for list="{{ installs }}" as="i" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #F2F3F7">
+                <div style="font-size:12.5px;font-weight:700;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.name }}</div>
+                <div style="font-size:10.5px;font-weight:700;color:#6B7280;background:#EFF0F5;padding:2px 6px;border-radius:5px">{{ i.platform }}</div>
+                <div style="font-size:11.5px;color:#6B7280;width:96px">{{ i.stage }}</div>
+                <div style="font-size:11px;color:#6B7280;width:58px;text-align:right" title="{{ i.absolute }}">{{ i.when }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+            <div style="display:flex;align-items:center;padding:11px 14px;border-bottom:1px solid #EFF0F5">
+              <div style="font-size:13px;font-weight:800">Recent churns</div>
+              <div style="margin-left:auto;font-size:11px;color:#6B7280">−1,340 SAR MRR this month</div>
+            </div>
+            <sc-for list="{{ churns }}" as="c" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #F2F3F7">
+                <div style="font-size:12.5px;font-weight:700;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</div>
+                <div style="font-size:11px;color:#6B7280;width:74px">{{ c.tenure }}</div>
+                <div style="font-size:11px;width:86px;color:{{ c.covFg }};font-weight:700">{{ c.coverage }}</div>
+                <div style="font-size:11.5px;font-weight:700;color:#B42318;width:60px;text-align:right;font-family:'Montserrat',sans-serif">{{ c.mrr }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══ STORES ══ -->
+      <sc-if value="{{ atStores }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+
+        <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05);padding:11px 13px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="display:flex;align-items:center;gap:7px;border:1px solid #EFF0F5;border-radius:11px;padding:6px 10px;width:250px;background:#F7F8FB">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A6ABBA" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+              <span style="font-size:12px;color:#6B7280">Search store, domain or ID</span>
+            </div>
+            <sc-for list="{{ selects }}" as="s" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:7px;border:1px solid #EFF0F5;border-radius:11px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer" style-hover="border-color:#1F2430">
+                <span style="color:#6B7280">{{ s.label }}</span><span>{{ s.value }}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A6ABBA" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+            </sc-for>
+            <div onClick="{{ toggleAttention }}" style="margin-left:auto;display:flex;align-items:center;gap:8px;border:1px solid {{ attnBorder }};background:{{ attnBg }};border-radius:11px;padding:6px 11px;cursor:pointer;font-size:12px;font-weight:700">
+              <div style="width:26px;height:15px;border-radius:8px;background:{{ attnTrack }};padding:2px;display:flex;justify-content:{{ attnJustify }}">
+                <div style="width:11px;height:11px;border-radius:50%;background:#FFFFFF"></div>
+              </div>
+              Needs attention only
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;border-top:1px solid #EFF0F5;padding-top:10px">
+            <span style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800;margin-right:2px">Saved views</span>
+            <sc-for list="{{ chips }}" as="c" hint-placeholder-count="6">
+              <div onClick="{{ c.pick }}" style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.fg }}">
+                {{ c.t }}<span style="font-family:'Montserrat',sans-serif;font-size:10.5px;opacity:.65">{{ c.n }}</span>
+              </div>
+            </sc-for>
+            <div style="margin-left:auto;font-size:11.5px;color:#6B7280">Showing <b>{{ shownCount }}</b> of 312 · order cap and coverage are period-to-date</div>
+          </div>
+        </div>
+
+        <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05);overflow:hidden">
+          <div style="max-height:640px;overflow:auto">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr>
+                  <th style="text-align:left;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:9px 10px;background:#F7F8FB;border-bottom:1px solid #EFF0F5;position:sticky;top:0;z-index:2">Store</th>
+                  <th style="text-align:left;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:9px 10px;background:#F7F8FB;border-bottom:1px solid #EFF0F5;position:sticky;top:0;z-index:2">Platform</th>
+                  <th style="text-align:left;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:9px 10px;background:#F7F8FB;border-bottom:1px solid #EFF0F5;position:sticky;top:0;z-index:2">Plan</th>
+                  <th style="text-align:left;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:9px 10px;background:#F7F8FB;border-bottom:1px solid #EFF0F5;position:sticky;top:0;z-index:2">Status</th>
+                  <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:9px 10px;background:#F7F8FB;border-bottom:1px solid #EFF0F5;position:sticky;top:0;z-index:2">Installed</th>
+                  <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:9px 10px;background:#F7F8FB;border-bottom:1px solid #EFF0F5;position:sticky;top:0;z-index:2">Orders ↓</th>
+                  <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:9px 10px;background:#F7F8FB;border-bottom:1px solid #EFF0F5;position:sticky;top:0;z-index:2">Cap use</th>
+                  <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:9px 10px;background:#F7F8FB;border-bottom:1px solid #EFF0F5;position:sticky;top:0;z-index:2">Coverage</th>
+                  <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:9px 10px;background:#F7F8FB;border-bottom:1px solid #EFF0F5;position:sticky;top:0;z-index:2">Last webhook</th>
+                  <th style="text-align:left;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:9px 10px;background:#F7F8FB;border-bottom:1px solid #EFF0F5;position:sticky;top:0;z-index:2">Health</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ stores }}" as="s" hint-placeholder-count="12">
+                  <tr onClick="{{ s.open }}" style="cursor:pointer;background:{{ s.rowBg }};box-shadow:inset 3px 0 0 {{ s.bar }}" style-hover="background:#EFF0F5">
+                    <td style="padding:9px 10px;border-bottom:1px solid #EFF0F5">
+                      <div style="display:flex;align-items:center;gap:7px">
+                        <span style="font-family:'Montserrat',sans-serif;font-size:11px;width:9px;color:{{ s.markFg }};font-weight:700">{{ s.mark }}</span>
+                        <div>
+                          <div style="font-size:12.5px;font-weight:700;letter-spacing:-0.01em">{{ s.name }}</div>
+                          <div style="font-size:10.5px;color:#6B7280;font-family:'Montserrat',sans-serif">{{ s.domain }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #EFF0F5;font-size:12px;color:#6B7280">{{ s.platform }}</td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #EFF0F5;font-size:12px;font-weight:600">{{ s.plan }}</td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #EFF0F5">
+                      <span style="font-size:10.5px;font-weight:800;padding:3px 7px;border-radius:6px;background:{{ s.stBg }};color:{{ s.stFg }}">{{ s.status }}</span>
+                    </td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #EFF0F5;font-size:11.5px;color:#6B7280;text-align:right" title="{{ s.installedAbs }}">{{ s.installed }}</td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #EFF0F5;font-size:12.5px;text-align:right;font-family:'Montserrat',sans-serif;font-weight:600">{{ s.orders }}</td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #EFF0F5;text-align:right">
+                      <div style="display:flex;align-items:center;gap:7px;justify-content:flex-end">
+                        <div style="width:44px;height:5px;background:#EFF0F5;border-radius:3px;overflow:hidden"><div style="height:5px;background:{{ s.capFill }};width:{{ s.capW }}"></div></div>
+                        <span style="font-size:11.5px;font-family:'Montserrat',sans-serif;font-weight:600;color:{{ s.capFg }};width:34px;text-align:right">{{ s.cap }}</span>
+                      </div>
+                    </td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #EFF0F5;text-align:right">
+                      <span style="font-size:12px;font-family:'Montserrat',sans-serif;font-weight:700;color:{{ s.covFg }}">{{ s.coverage }}</span>
+                    </td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #EFF0F5;font-size:11.5px;text-align:right;color:{{ s.hookFg }}" title="{{ s.hookAbs }}">{{ s.lastHook }}</td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #EFF0F5">
+                      <div style="display:flex;align-items:center;gap:6px">
+                        <div style="width:6px;height:6px;border-radius:50%;background:{{ s.hDot }}"></div>
+                        <span style="font-size:11.5px;font-weight:600;color:{{ s.hFg }}">{{ s.health }}</span>
+                      </div>
+                    </td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <sc-if value="{{ zeroStores }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:44px 20px;text-align:center;border-top:1px solid #EFF0F5">
+              <div style="font-size:15px;font-weight:800">No stores yet</div>
+              <div style="font-size:12.5px;color:#6B7280;margin-top:6px;max-width:420px;margin-left:auto;margin-right:auto;line-height:1.55">The Salla listing went live 2 days ago. Installs will appear here within seconds of the first OAuth callback — the webhook receiver is up and idle.</div>
+              <div style="display:inline-flex;gap:8px;margin-top:13px">
+                <div style="font-size:12px;font-weight:700;color:#FFFFFF;background:#5B5FE0;padding:7px 12px;border-radius:11px;cursor:pointer">Check receiver</div>
+                <div style="font-size:12px;font-weight:700;border:1px solid #EFF0F5;padding:7px 12px;border-radius:11px;cursor:pointer">Open Salla listing</div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══ STORE DETAIL ══ -->
+      <sc-if value="{{ atStore }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+
+        <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05);padding:14px">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div onClick="{{ goStores }}" style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#1F2430;cursor:pointer;padding:5px 9px;border:1px solid #EFF0F5;border-radius:8px" style-hover="background:#EFF0F5">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1F2430" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg> Stores
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;gap:9px">
+                <div style="font-size:20px;font-weight:800;letter-spacing:-0.02em">{{ detail.name }}</div>
+                <span style="font-size:10.5px;font-weight:800;padding:3px 7px;border-radius:6px;background:{{ detail.stBg }};color:{{ detail.stFg }}">{{ detail.status }}</span>
+                <span style="font-size:10.5px;font-weight:800;padding:3px 7px;border-radius:6px;background:#EFF0F5;color:#6B7280">{{ detail.plan }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;margin-top:7px;font-size:11.5px;color:#6B7280">
+                <span>{{ detail.platform }}</span><span style="color:#E6E8EF">·</span>
+                <span>Installed {{ detail.installed }}</span><span style="color:#E6E8EF">·</span>
+                <span>SAR</span><span style="color:#E6E8EF">·</span>
+                <span>Asia/Riyadh (store) · Asia/Amman (you)</span><span style="color:#E6E8EF">·</span>
+                <a href="#">{{ detail.domain }} ↗</a>
+              </div>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:14px;text-align:right">
+              <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">MRR</div><div style="font-size:17px;font-weight:800;font-family:'Montserrat',sans-serif">299</div></div>
+              <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Coverage</div><div style="font-size:17px;font-weight:800;font-family:'Montserrat',sans-serif;color:#B42318">31%</div></div>
+              <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Last sync</div><div style="font-size:17px;font-weight:800;font-family:'Montserrat',sans-serif" title="5 Sep 2026, 11:40 Asia/Amman">2h</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+            <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex"><div style="font-size:13px;font-weight:800">Subscription</div><div style="margin-left:auto;font-size:11px;color:#6B7280">reconciled 40m ago</div></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#EFF0F5">
+              <div style="background:#FFFFFF;padding:10px 14px"><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Period</div><div style="font-size:12.5px;font-weight:700;margin-top:3px">1–30 Sep 2026</div></div>
+              <div style="background:#FFFFFF;padding:10px 14px"><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Trial ended</div><div style="font-size:12.5px;font-weight:700;margin-top:3px">18 Jul 2026</div></div>
+              <div style="background:#FFFFFF;padding:10px 14px"><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Renews</div><div style="font-size:12.5px;font-weight:700;margin-top:3px">1 Oct 2026</div></div>
+            </div>
+            <div style="padding:10px 14px 12px 14px;border-top:1px solid #EFF0F5">
+              <div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800;margin-bottom:6px">Plan history</div>
+              <sc-for list="{{ planHistory }}" as="h" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #F7F8FB">
+                  <div style="width:5px;height:5px;border-radius:50%;background:{{ h.dot }}"></div>
+                  <div style="font-size:12px;font-weight:600">{{ h.event }}</div>
+                  <div style="margin-left:auto;font-size:11px;color:#6B7280" title="{{ h.absolute }}">{{ h.when }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+            <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex"><div style="font-size:13px;font-weight:800">Ingestion health</div><div style="margin-left:auto;font-size:11px;color:#6B7280">{{ range }} · events/hour</div></div>
+            <div style="padding:12px 14px">
+              <div style="display:flex;gap:18px">
+                <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Received</div><div style="font-size:18px;font-weight:800;font-family:'Montserrat',sans-serif">14,802</div></div>
+                <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Processed</div><div style="font-size:18px;font-weight:800;font-family:'Montserrat',sans-serif">14,061</div></div>
+                <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Failed</div><div style="font-size:18px;font-weight:800;font-family:'Montserrat',sans-serif;color:#B42318">741</div></div>
+                <div style="display:flex;align-items:flex-end;gap:2px;height:38px;margin-left:auto">
+                  <sc-for list="{{ ingestSeries }}" as="b" hint-placeholder-count="24">
+                    <div style="width:5px;border-radius:2px;background:{{ b.c }};height:{{ b.h }}px"></div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="margin-top:12px;padding-top:11px;border-top:1px solid #EFF0F5">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <div style="font-size:12px;font-weight:700">Backfill</div>
+                  <span style="font-size:10.5px;font-weight:800;padding:2px 6px;border-radius:5px;background:#FEF3C7;color:#B45309">STUCK · 62%</span>
+                  <div style="margin-left:auto;font-size:11px;color:#6B7280">no progress in 9h · worker lost lease</div>
+                </div>
+                <div style="height:7px;background:#EFF0F5;border-radius:4px;margin-top:7px;overflow:hidden"><div style="height:7px;width:62%;background:#F59E0B;border-radius:4px"></div></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid #EFF0F5">
+                <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Orders</div><div style="font-size:12.5px;font-weight:700;margin-top:2px" title="5 Sep 2026, 11:40 Asia/Amman">2h ago</div></div>
+                <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Products</div><div style="font-size:12.5px;font-weight:700;margin-top:2px" title="5 Sep 2026, 09:05 Asia/Amman">4h ago</div></div>
+                <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Shipments</div><div style="font-size:12.5px;font-weight:700;margin-top:2px;color:#B42318" title="2 Sep 2026, 22:14 Asia/Amman">2d ago</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.15fr 1fr 300px;gap:12px;align-items:start">
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+            <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex;align-items:center">
+              <div style="font-size:13px;font-weight:800">Data quality</div>
+              <div style="margin-left:auto;font-size:10.5px;font-weight:800;background:#FEE4E2;color:#B42318;padding:2px 7px;border-radius:6px">CHURN RISK</div>
+            </div>
+            <div style="padding:12px 14px">
+              <div style="display:flex;align-items:flex-end;gap:10px">
+                <div style="font-size:30px;font-weight:800;letter-spacing:-0.03em;font-family:'Montserrat',sans-serif;line-height:1">31%</div>
+                <div style="font-size:11.5px;color:#6B7280;padding-bottom:3px">cost coverage, weighted by revenue<br>flat for 6 weeks — never crossed 40%</div>
+              </div>
+              <div style="height:8px;background:#EFF0F5;border-radius:4px;margin-top:10px;overflow:hidden"><div style="height:8px;width:31%;background:#EF4444;border-radius:4px"></div></div>
+              <sc-for list="{{ quality }}" as="q" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F7F8FB">
+                  <div style="font-size:12px;color:#1F2430">{{ q.label }}</div>
+                  <div style="margin-left:auto;font-size:12.5px;font-weight:800;font-family:'Montserrat',sans-serif;color:{{ q.fg }}">{{ q.v }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+            <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex"><div style="font-size:13px;font-weight:800">Activity</div><div style="margin-left:auto;font-size:11px;color:#6B7280">orders ingested / day</div></div>
+            <div style="padding:12px 14px">
+              <div style="display:flex;align-items:flex-end;gap:3px;height:80px">
+                <sc-for list="{{ activitySeries }}" as="b" hint-placeholder-count="30">
+                  <div style="flex:1;border-radius:2px;background:{{ b.c }};height:{{ b.h }}%"></div>
+                </sc-for>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10.5px;color:#6B7280;margin-top:6px"><span>7 Aug</span><span>21 Aug</span><span>5 Sep</span></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:11px;padding-top:11px;border-top:1px solid #EFF0F5">
+                <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Profit records</div><div style="font-size:15px;font-weight:800;font-family:'Montserrat',sans-serif;margin-top:2px">8,914</div></div>
+                <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Dashboard sessions</div><div style="font-size:15px;font-weight:800;font-family:'Montserrat',sans-serif;margin-top:2px">3 <span style="font-size:11px;color:#6B7280;font-weight:600">/ 30d</span></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#FEF5F4;border:1px solid #FECDCA;border-radius:18px">
+            <div style="padding:11px 14px;border-bottom:1px solid #FECDCA">
+              <div style="font-size:13px;font-weight:800">Operator actions</div>
+              <div style="font-size:11px;color:#B42318;margin-top:3px">These write to production. Each asks for confirmation.</div>
+            </div>
+            <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ actions }}" as="a" hint-placeholder-count="4">
+                <div onClick="{{ a.run }}" style="border:1px solid #FECDCA;background:#FFFFFF;border-radius:12px;padding:9px 11px;cursor:pointer" style-hover="border-color:#EF4444">
+                  <div style="font-size:12.5px;font-weight:800">{{ a.t }}</div>
+                  <div style="font-size:11px;color:#6B7280;margin-top:2px">{{ a.d }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══ HEALTH ══ -->
+      <sc-if value="{{ atHealth }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px">
+          <sc-for list="{{ healthStats }}" as="s" hint-placeholder-count="5">
+            <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05);padding:12px 13px">
+              <div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">{{ s.label }}</div>
+              <div style="font-size:22px;font-weight:800;letter-spacing:-0.02em;font-family:'Montserrat',sans-serif;margin-top:5px;color:{{ s.fg }}">{{ s.v }}</div>
+              <div style="font-size:11px;color:#6B7280;margin-top:2px">{{ s.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr;gap:12px">
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+            <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex;align-items:center">
+              <div style="font-size:13px;font-weight:800">Queue depth &amp; throughput</div>
+              <div style="margin-left:auto;display:flex;gap:14px;font-size:11px;color:#6B7280">
+                <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:#1F2430"></span>Salla depth</span>
+                <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:#C7C9F7"></span>Zid depth</span>
+                <span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:#F59E0B"></span>Retry queue</span>
+              </div>
+            </div>
+            <div style="padding:14px">
+              <div style="display:flex;align-items:flex-end;gap:4px;height:120px">
+                <sc-for list="{{ queueSeries }}" as="c" hint-placeholder-count="36">
+                  <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:1px">
+                    <div style="background:#F59E0B;height:{{ c.r }}px;border-radius:1px"></div>
+                    <div style="background:#C7C9F7;height:{{ c.z }}px;border-radius:1px"></div>
+                    <div style="background:#1F2430;height:{{ c.s }}px;border-radius:1px"></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10.5px;color:#6B7280;margin-top:7px;border-top:1px solid #EFF0F5;padding-top:7px"><span>−24h</span><span>−18h</span><span>−12h</span><span>−6h</span><span>now · 14:24 Asia/Amman</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start">
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05);overflow:hidden">
+            <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex;align-items:center">
+              <div style="font-size:13px;font-weight:800">Failed jobs</div>
+              <div style="margin-left:auto;font-size:11px;color:#6B7280">47 in {{ range }} · grouped by error</div>
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr>
+                <th style="text-align:left;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:8px 12px;background:#F7F8FB;border-bottom:1px solid #EFF0F5">Job / error</th>
+                <th style="text-align:left;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:8px 12px;background:#F7F8FB;border-bottom:1px solid #EFF0F5">Store</th>
+                <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:8px 12px;background:#F7F8FB;border-bottom:1px solid #EFF0F5">Retries</th>
+                <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:8px 12px;background:#F7F8FB;border-bottom:1px solid #EFF0F5">Last</th>
+                <th style="background:#F7F8FB;border-bottom:1px solid #EFF0F5"></th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ jobs }}" as="j" hint-placeholder-count="6">
+                  <tr>
+                    <td style="padding:9px 12px;border-bottom:1px solid #EFF0F5">
+                      <div style="font-size:12.5px;font-weight:700">{{ j.job }}</div>
+                      <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#B42318;margin-top:2px">{{ j.err }}</div>
+                    </td>
+                    <td style="padding:9px 12px;border-bottom:1px solid #EFF0F5;font-size:12px;color:#6B7280">{{ j.store }}</td>
+                    <td style="padding:9px 12px;border-bottom:1px solid #EFF0F5;font-size:12px;text-align:right;font-family:'Montserrat',sans-serif;color:{{ j.rFg }};font-weight:700">{{ j.retries }}</td>
+                    <td style="padding:9px 12px;border-bottom:1px solid #EFF0F5;font-size:11.5px;text-align:right;color:#6B7280" title="{{ j.absolute }}">{{ j.when }}</td>
+                    <td style="padding:9px 12px;border-bottom:1px solid #EFF0F5;text-align:right">
+                      <span onClick="{{ j.retry }}" style="font-size:11.5px;font-weight:700;border:1px solid #EFF0F5;padding:4px 9px;border-radius:7px;cursor:pointer;white-space:nowrap" style-hover="background:#EFF0F5;border-color:#1F2430">Retry</span>
+                    </td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+              <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;font-size:13px;font-weight:800">Webhook events · {{ range }}</div>
+              <sc-for list="{{ webhookRows }}" as="w" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #F2F3F7">
+                  <div style="width:6px;height:6px;border-radius:50%;background:{{ w.dot }}"></div>
+                  <div style="font-size:12px">{{ w.label }}</div>
+                  <div style="margin-left:auto;font-size:12.5px;font-weight:800;font-family:'Montserrat',sans-serif;color:{{ w.fg }}">{{ w.v }}</div>
+                  <div style="font-size:10.5px;color:#6B7280;width:52px;text-align:right">{{ w.pct }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05);padding:12px 14px">
+              <div style="display:flex;align-items:center"><div style="font-size:13px;font-weight:800">Nightly reconciliation</div><div style="margin-left:auto;font-size:10.5px;font-weight:800;background:#FEF3C7;color:#B45309;padding:2px 7px;border-radius:6px">RISING</div></div>
+              <div style="font-size:11.5px;color:#6B7280;margin-top:5px">Corrections per run. A rising trend means the live webhook path is dropping events.</div>
+              <div style="display:flex;align-items:flex-end;gap:5px;height:62px;margin-top:11px">
+                <sc-for list="{{ reconSeries }}" as="b" hint-placeholder-count="14">
+                  <div style="flex:1;border-radius:2px;background:{{ b.c }};height:{{ b.h }}%"></div>
+                </sc-for>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10.5px;color:#6B7280;margin-top:6px"><span>14 runs ago</span><span>last night: 418</span></div>
+            </div>
+
+            <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+              <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;font-size:13px;font-weight:800">Platform API</div>
+              <sc-for list="{{ apiRows }}" as="r" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #F2F3F7">
+                  <div style="font-size:12px;font-weight:700;width:96px">{{ r.name }}</div>
+                  <div style="font-size:11px;color:#6B7280">err</div>
+                  <div style="font-size:12.5px;font-weight:800;font-family:'Montserrat',sans-serif;color:{{ r.eFg }}">{{ r.err }}</div>
+                  <div style="margin-left:auto;font-size:11px;color:#6B7280">429s</div>
+                  <div style="font-size:12.5px;font-weight:800;font-family:'Montserrat',sans-serif;color:{{ r.lFg }}">{{ r.limit }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══ REVENUE ══ -->
+      <sc-if value="{{ atRevenue }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+
+        <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:12px;align-items:start">
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+            <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex;align-items:center">
+              <div style="font-size:13px;font-weight:800">MRR · SAR</div>
+              <div style="margin-left:auto;display:flex;align-items:center;gap:14px;font-size:11px;color:#6B7280">
+                <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:2px;background:#5B5FE0"></span>MRR</span>
+                <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:2px;background:#EF4444"></span>Churned MRR</span>
+              </div>
+            </div>
+            <div style="padding:14px">
+              <div style="display:flex;align-items:flex-end;gap:16px">
+                <div>
+                  <div style="font-size:34px;font-weight:800;letter-spacing:-0.03em;line-height:1">48,120</div>
+                  <div style="font-size:11.5px;color:#6B7280;margin-top:4px">+2,210 vs Aug · +4.8%</div>
+                </div>
+                <div style="display:flex;gap:16px;margin-left:auto;text-align:right">
+                  <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">New</div><div style="font-size:15px;font-weight:800;margin-top:2px;color:#15803D">+3,550</div></div>
+                  <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Expansion</div><div style="font-size:15px;font-weight:800;margin-top:2px;color:#15803D">+1,140</div></div>
+                  <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Churn</div><div style="font-size:15px;font-weight:800;margin-top:2px;color:#B42318">−1,340</div></div>
+                  <div><div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">ARPA</div><div style="font-size:15px;font-weight:800;margin-top:2px">262</div></div>
+                </div>
+              </div>
+              <svg viewBox="0 0 720 190" style="width:100%;height:190px;margin-top:12px;display:block">
+                <line x1="0" y1="10" x2="720" y2="10" stroke="#EFF0F5" stroke-width="1"></line>
+                <line x1="0" y1="55" x2="720" y2="55" stroke="#EFF0F5" stroke-width="1"></line>
+                <line x1="0" y1="100" x2="720" y2="100" stroke="#EFF0F5" stroke-width="1"></line>
+                <line x1="0" y1="145" x2="720" y2="145" stroke="#EFF0F5" stroke-width="1"></line>
+                <line x1="0" y1="176" x2="720" y2="176" stroke="#EFF0F5" stroke-width="1"></line>
+                <polyline points="0,168 60,160 120,150 180,146 240,132 300,120 360,104 420,96 480,74 540,60 600,44 660,30 720,18" fill="none" stroke="#5B5FE0" stroke-width="2.5"></polyline>
+                <polyline points="0,176 60,174 120,172 180,175 240,170 300,168 360,171 420,164 480,166 540,158 600,161 660,152 720,156" fill="none" stroke="#EF4444" stroke-width="1.75" stroke-dasharray="4 3"></polyline>
+                <circle cx="720" cy="18" r="3.5" fill="#5B5FE0"></circle>
+              </svg>
+              <div style="display:flex;justify-content:space-between;font-size:10.5px;color:#6B7280;margin-top:5px">
+                <span>Sep 25</span><span>Dec</span><span>Mar 26</span><span>Jun</span><span>Sep 26</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+              <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex"><div style="font-size:13px;font-weight:800">By plan</div><div style="margin-left:auto;font-size:11px;color:#6B7280">184 paid stores</div></div>
+              <div style="padding:12px 14px;display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ byPlan }}" as="r" hint-placeholder-count="3">
+                  <div>
+                    <div style="display:flex;align-items:baseline;gap:8px">
+                      <div style="font-size:12px;font-weight:700">{{ r.name }}</div>
+                      <div style="font-size:11px;color:#6B7280">{{ r.stores }} stores · {{ r.price }}/mo</div>
+                      <div style="margin-left:auto;font-size:12.5px;font-weight:800">{{ r.mrr }}</div>
+                      <div style="font-size:10.5px;color:#6B7280;width:34px;text-align:right">{{ r.share }}</div>
+                    </div>
+                    <div style="height:7px;background:#EFF0F5;border-radius:4px;margin-top:5px;overflow:hidden"><div style="height:7px;border-radius:4px;background:{{ r.fill }};width:{{ r.w }}"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+              <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex"><div style="font-size:13px;font-weight:800">By platform</div><div style="margin-left:auto;font-size:11px;color:#6B7280">Zid launched Jun 26</div></div>
+              <div style="padding:12px 14px;display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ byPlatform }}" as="r" hint-placeholder-count="2">
+                  <div>
+                    <div style="display:flex;align-items:baseline;gap:8px">
+                      <div style="font-size:12px;font-weight:700">{{ r.name }}</div>
+                      <div style="font-size:11px;color:#6B7280">{{ r.stores }} stores</div>
+                      <div style="margin-left:auto;font-size:12.5px;font-weight:800">{{ r.mrr }}</div>
+                      <div style="font-size:10.5px;color:#6B7280;width:34px;text-align:right">{{ r.share }}</div>
+                    </div>
+                    <div style="height:7px;background:#EFF0F5;border-radius:4px;margin-top:5px;overflow:hidden"><div style="height:7px;border-radius:4px;background:{{ r.fill }};width:{{ r.w }}"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1.35fr;gap:12px;align-items:start">
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+            <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex;align-items:center">
+              <div style="font-size:13px;font-weight:800">Trial → paid conversion</div>
+              <div style="margin-left:auto;font-size:10.5px;font-weight:800;background:#DCFCE7;color:#15803D;padding:2px 7px;border-radius:6px">+6 pts / 6 mo</div>
+            </div>
+            <div style="padding:13px 14px">
+              <div style="display:flex;align-items:flex-end;gap:12px">
+                <div style="font-size:30px;font-weight:800;letter-spacing:-0.03em;line-height:1">58%</div>
+                <div style="font-size:11.5px;color:#6B7280;padding-bottom:3px">of 14-day trials convert<br>cohorts that entered cost data: 81%</div>
+              </div>
+              <div style="display:flex;gap:6px;height:74px;margin-top:13px">
+                <sc-for list="{{ convSeries }}" as="b" hint-placeholder-count="9">
+                  <div style="flex:1;height:100%;display:flex;flex-direction:column;align-items:stretch;gap:4px">
+                    <div style="flex:1;display:flex;align-items:flex-end"><div style="width:100%;border-radius:3px;background:{{ b.c }};height:{{ b.h }}%"></div></div>
+                    <div style="font-size:9.5px;color:#6B7280;text-align:center">{{ b.m }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+            <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex;align-items:center">
+              <div style="font-size:13px;font-weight:800">Churn</div>
+              <div style="margin-left:auto;display:flex;gap:16px;font-size:11px;color:#6B7280">
+                <span>5 stores · <b style="color:#B42318">−1,340 SAR</b> this month</span>
+                <span>gross rev churn <b style="color:#1F2430">2.7%</b></span>
+              </div>
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr>
+                <th style="text-align:left;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:8px 14px;background:#F7F8FB;border-bottom:1px solid #EFF0F5">Store</th>
+                <th style="text-align:left;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:8px 14px;background:#F7F8FB;border-bottom:1px solid #EFF0F5">Plan</th>
+                <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:8px 14px;background:#F7F8FB;border-bottom:1px solid #EFF0F5">Tenure</th>
+                <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:8px 14px;background:#F7F8FB;border-bottom:1px solid #EFF0F5">Final coverage</th>
+                <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:8px 14px;background:#F7F8FB;border-bottom:1px solid #EFF0F5">MRR lost</th>
+                <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:8px 14px;background:#F7F8FB;border-bottom:1px solid #EFF0F5">Churned</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ churnRows }}" as="c" hint-placeholder-count="5">
+                  <tr onClick="{{ c.open }}" style="cursor:pointer" style-hover="background:#F7F8FB">
+                    <td style="padding:9px 14px;border-bottom:1px solid #EFF0F5;font-size:12.5px;font-weight:700">{{ c.name }}</td>
+                    <td style="padding:9px 14px;border-bottom:1px solid #EFF0F5;font-size:12px;color:#6B7280">{{ c.plan }}</td>
+                    <td style="padding:9px 14px;border-bottom:1px solid #EFF0F5;font-size:12px;text-align:right">{{ c.tenure }}</td>
+                    <td style="padding:9px 14px;border-bottom:1px solid #EFF0F5;font-size:12px;text-align:right;font-weight:700;color:{{ c.covFg }}">{{ c.coverage }}</td>
+                    <td style="padding:9px 14px;border-bottom:1px solid #EFF0F5;font-size:12.5px;text-align:right;font-weight:800;color:#B42318">{{ c.mrr }}</td>
+                    <td style="padding:9px 14px;border-bottom:1px solid #EFF0F5;font-size:11.5px;text-align:right;color:#6B7280" title="{{ c.absolute }}">{{ c.when }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+          <div style="padding:11px 14px;border-bottom:1px solid #EFF0F5;display:flex;align-items:center">
+            <div style="font-size:13px;font-weight:800">Merchant retention by install month</div>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:10px;font-size:11px;color:#6B7280">
+              % of installs still paying
+              <span style="display:flex;align-items:center;gap:3px">
+                <span style="width:14px;height:10px;background:#EFF0F5"></span><span style="width:14px;height:10px;background:#C7C9F7"></span><span style="width:14px;height:10px;background:#FBC98A"></span><span style="width:14px;height:10px;background:#F5A04A"></span><span style="width:14px;height:10px;background:#15803D"></span>
+              </span>
+            </div>
+          </div>
+          <div style="padding:12px 14px;overflow:auto">
+            <table style="border-collapse:separate;border-spacing:3px">
+              <thead>
+                <tr>
+                  <th style="text-align:left;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:0 8px 4px 0">Cohort</th>
+                  <th style="text-align:right;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#6B7280;font-weight:800;padding:0 8px 4px 0">Installs</th>
+                  <sc-for list="{{ cohortCols }}" as="m" hint-placeholder-count="10">
+                    <th style="font-size:9.5px;color:#6B7280;font-weight:800;padding:0 0 4px 0;width:52px">{{ m }}</th>
+                  </sc-for>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ cohorts }}" as="row" hint-placeholder-count="10">
+                  <tr>
+                    <td style="font-size:11.5px;font-weight:700;padding-right:8px;white-space:nowrap">{{ row.label }}</td>
+                    <td style="font-size:11.5px;color:#6B7280;text-align:right;padding-right:8px">{{ row.n }}</td>
+                    <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="10">
+                      <td style="width:52px;height:26px;text-align:center;font-size:11px;font-weight:700;background:{{ c.bg }};color:{{ c.fg }};border-radius:5px">{{ c.v }}</td>
+                    </sc-for>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══ REVIEW QUEUES ══ -->
+      <sc-if value="{{ atQueues }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:12px;align-items:start">
+
+        <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05)">
+          <div style="padding:12px 14px;border-bottom:1px solid #EFF0F5">
+            <div style="display:flex;align-items:center;gap:9px">
+              <div style="font-size:14px;font-weight:800">Unknown payment method labels</div>
+              <div style="font-size:10.5px;font-weight:800;background:#EFF0F5;color:#1F2430;padding:2px 7px;border-radius:6px">{{ payQueueLeft }} LEFT</div>
+              <div style="margin-left:auto;font-size:11px;color:#6B7280">{{ payQueueDone }} mapped today · unmapped values fall back to “Other”</div>
+            </div>
+            <div style="height:5px;background:#EFF0F5;border-radius:3px;margin-top:9px;overflow:hidden"><div style="height:5px;border-radius:3px;background:#1F2430;width:{{ payQueuePct }}"></div></div>
+          </div>
+          <sc-for list="{{ payQueue }}" as="q" hint-placeholder-count="7">
+            <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid #F2F3F7" style-hover="background:#F7F8FB">
+              <div style="min-width:0;flex:1">
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600">{{ q.raw }}</div>
+                <div style="font-size:11px;color:#6B7280;margin-top:3px">{{ q.context }}</div>
+              </div>
+              <div style="font-size:10.5px;font-weight:700;color:#6B7280;background:#EFF0F5;padding:2px 6px;border-radius:5px">{{ q.platform }}</div>
+              <div style="text-align:right;width:78px">
+                <div style="font-size:13px;font-weight:800">{{ q.count }}</div>
+                <div style="font-size:10px;color:#6B7280">orders</div>
+              </div>
+              <div onClick="{{ q.map }}" style="display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:#FFFFFF;background:#5B5FE0;padding:6px 11px;border-radius:11px;cursor:pointer;white-space:nowrap" style-hover="background:#4A4ECB">
+                Map to <span style="opacity:.6">{{ q.suggestion }}</span>
+              </div>
+              <div onClick="{{ q.dismiss }}" title="Dismiss — keep falling back to Other" style="font-size:14px;color:#6B7280;cursor:pointer;padding:2px 6px;border-radius:8px" style-hover="background:#EFF0F5;color:#1F2430">×</div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ payQueueEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:34px 14px;display:flex;align-items:center;gap:13px;justify-content:center">
+              <div style="width:34px;height:34px;border-radius:11px;background:#DCFCE7;display:flex;align-items:center;justify-content:center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div>
+                <div style="font-size:14px;font-weight:800">Queue clear</div>
+                <div style="font-size:12px;color:#6B7280;margin-top:2px">Every payment label the adapters saw this week is mapped.</div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="background:#FFFFFF;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05);position:relative;overflow:hidden">
+            <div style="padding:12px 14px;border-bottom:1px solid #EFF0F5;display:flex;align-items:center;gap:9px">
+              <div style="font-size:14px;font-weight:800">Unmatched campaigns</div>
+              <div style="font-size:10.5px;font-weight:800;background:#EEF0FD;color:#3A3D9E;padding:2px 7px;border-radius:6px">PHASE 2</div>
+              <div style="margin-left:auto;font-size:11px;color:#6B7280">shell only · ad adapters not shipped</div>
+            </div>
+            <div style="opacity:.5">
+              <sc-for list="{{ campQueue }}" as="q" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid #F2F3F7">
+                  <div style="min-width:0;flex:1">
+                    <div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600">{{ q.raw }}</div>
+                    <div style="font-size:11px;color:#6B7280;margin-top:3px">{{ q.context }}</div>
+                  </div>
+                  <div style="font-size:10.5px;font-weight:700;color:#6B7280;background:#EFF0F5;padding:2px 6px;border-radius:5px">{{ q.platform }}</div>
+                  <div style="text-align:right;width:78px"><div style="font-size:13px;font-weight:800">{{ q.count }}</div><div style="font-size:10px;color:#6B7280">clicks</div></div>
+                  <div style="font-size:11.5px;font-weight:700;border:1px solid #EFF0F5;padding:6px 11px;border-radius:11px;white-space:nowrap">Map to campaign</div>
+                  <div style="font-size:14px;color:#6B7280;padding:2px 6px">×</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#F7F8FB;border:1px solid #EFF0F5;border-radius:14px;box-shadow:0 1px 2px rgba(31,36,48,0.04), 0 6px 18px rgba(31,36,48,0.05);padding:13px 14px">
+            <div style="font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:#6B7280;font-weight:800">Queue pattern</div>
+            <div style="font-size:12px;color:#1F2430;margin-top:7px;line-height:1.6">Every queue is the same four columns — raw value, context, occurrence count, one primary action — plus dismiss. Both queues are finishable by design: the count in the header is the only number that matters, and it only goes down.</div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══ NARROW OVERVIEW ══ -->
+      <sc-if value="{{ atMobile }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:20px;align-items:flex-start">
+        <div style="width:390px;flex:0 0 390px;background:#FFFFFF;border:1px solid #EFF0F5;border-radius:26px;overflow:hidden;box-shadow:0 18px 40px rgba(0,0,0,0.55)">
+          <div style="padding:12px 16px 10px 16px;border-bottom:1px solid #EFF0F5">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:22px;height:22px;border-radius:7px;background:#1F2430;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:10px">G</div>
+              <div style="font-size:13px;font-weight:800">Ghalla</div>
+              <div style="margin-left:auto;font-size:10.5px;color:#6B7280">Updated 2m ago</div>
+            </div>
+            <div style="font-size:10.5px;color:#6B7280;margin-top:8px">Read-only · manage from desktop</div>
+          </div>
+
+          <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid #EFF0F5">
+            <sc-for list="{{ mobilePlatforms }}" as="p" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:9px;background:{{ p.cardBg }};border:1px solid {{ p.cardBorder }};border-radius:14px;padding:10px 12px;color:#1F2430">
+                <div style="width:7px;height:7px;border-radius:50%;background:{{ p.dot }}"></div>
+                <div style="font-size:12.5px;font-weight:800;color:#1F2430">{{ p.name }}</div>
+                <div style="margin-left:auto;font-size:12.5px;font-weight:800;color:#1F2430">{{ p.hook }}</div>
+                <div style="font-size:10.5px;color:#6B7280;width:74px;text-align:right">q {{ p.queue }} · f {{ p.failed }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="padding:12px 16px;border-bottom:1px solid #EFF0F5">
+            <div style="display:flex;align-items:center">
+              <div style="font-size:12.5px;font-weight:800">Alerts</div>
+              <div style="margin-left:auto;font-size:10.5px;font-weight:800;background:#FEE4E2;color:#B42318;padding:2px 7px;border-radius:6px">6 ACTIVE</div>
+            </div>
+            <div style="display:flex;flex-direction:column;margin-top:8px">
+              <sc-for list="{{ mobileAlerts }}" as="a" hint-placeholder-count="4">
+                <div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #F2F3F7">
+                  <div style="width:3px;border-radius:2px;background:{{ a.bar }};flex:0 0 3px"></div>
+                  <div style="min-width:0;flex:1">
+                    <div style="font-size:12.5px;font-weight:700;line-height:1.35">{{ a.title }}</div>
+                    <div style="font-size:11px;color:#6B7280;margin-top:3px">{{ a.store }} · {{ a.when }}</div>
+                  </div>
+                  <div style="font-size:9.5px;font-weight:800;color:{{ a.sevFg }};background:{{ a.sevBg }};padding:2px 6px;border-radius:5px;height:16px">{{ a.sev }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="padding:12px 16px">
+            <div style="background:#4A4ECB;border-radius:16px;padding:13px 14px;color:#FFFFFF">
+              <div style="font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;font-weight:800;color:#E8E9FD">MRR · SAR</div>
+              <div style="font-size:26px;font-weight:800;letter-spacing:-0.03em;margin-top:6px">48,120</div>
+              <div style="display:flex;gap:14px;margin-top:10px;padding-top:10px;border-top:1px solid #6B6FE3;font-size:11px;color:#E8E9FD">
+                <span>184 paid</span><span>37 trialing</span><span style="color:#FECDCA">6 past due</span>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:12px">
+              <sc-for list="{{ mobileFunnel }}" as="f" hint-placeholder-count="5">
+                <div style="text-align:center">
+                  <div style="font-size:14px;font-weight:800">{{ f.n }}</div>
+                  <div style="font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:#6B7280;font-weight:700;margin-top:2px">{{ f.step }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="max-width:420px;padding-top:6px">
+          <div style="font-size:13px;font-weight:800">Narrow overview · 390px</div>
+          <div style="font-size:12px;color:#6B7280;margin-top:7px;line-height:1.6">The only screen that goes narrow. Read-only: no filters, no actions, no tables. Same order as the desktop overview — platform health, alerts, revenue, funnel counts — so the scan is muscle memory. Alerts don't link out; there is nothing to do from a phone but know.</div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <!-- ── command palette ───────────────────────────────────── -->
+  <sc-if value="{{ paletteOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closePalette }}" style="position:fixed;inset:0;background:rgba(0,0,0,0.72);display:flex;align-items:flex-start;justify-content:center;padding-top:112px;z-index:60">
+      <div onClick="{{ stop }}" style="width:560px;background:#FFFFFF;border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,0.66);overflow:hidden;animation:fadein .12s ease-out">
+        <div style="display:flex;align-items:center;gap:9px;padding:13px 15px;border-bottom:1px solid #EFF0F5">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#A6ABBA" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          <input value="{{ query }}" onChange="{{ setQuery }}" placeholder="Jump to store, or type a command…" style="border:none;outline:none;background:transparent;font-size:14px;font-family:'Montserrat',sans-serif;flex:1;color:#1F2430;caret-color:#1F2430" />
+          <span style="font-family:'Montserrat',sans-serif;font-size:10.5px;color:#6B7280;border:1px solid #EFF0F5;padding:2px 5px;border-radius:5px">esc</span>
+        </div>
+        <div style="max-height:320px;overflow:auto">
+          <sc-for list="{{ results }}" as="r" hint-placeholder-count="6">
+            <div onClick="{{ r.open }}" style="display:flex;align-items:center;gap:10px;padding:10px 15px;border-bottom:1px solid #F7F8FB;cursor:pointer" style-hover="background:#EFF0F5">
+              <div style="width:6px;height:6px;border-radius:50%;background:{{ r.dot }}"></div>
+              <div style="font-size:13px;font-weight:700">{{ r.name }}</div>
+              <div style="font-size:11px;color:#6B7280;font-family:'Montserrat',sans-serif">{{ r.domain }}</div>
+              <div style="margin-left:auto;font-size:10.5px;font-weight:700;color:#6B7280;background:#EFF0F5;padding:2px 6px;border-radius:5px">{{ r.platform }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ── confirm dialog ────────────────────────────────────── -->
+  <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeConfirm }}" style="position:fixed;inset:0;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;z-index:70">
+      <div onClick="{{ stop }}" style="width:460px;background:#FFFFFF;border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,0.66);overflow:hidden;animation:fadein .12s ease-out">
+        <div style="padding:15px 16px;border-bottom:1px solid #EFF0F5;display:flex;align-items:center;gap:10px">
+          <div style="width:26px;height:26px;border-radius:8px;background:#FEE4E2;color:#B42318;display:flex;align-items:center;justify-content:center;font-weight:800">!</div>
+          <div style="font-size:15px;font-weight:800">{{ confirmTitle }}</div>
+        </div>
+        <div style="padding:14px 16px">
+          <div style="font-size:12.5px;color:#6B7280;line-height:1.55">{{ confirmBody }}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;background:#F7F8FB;border:1px solid #EFF0F5;border-radius:11px;padding:9px 11px;margin-top:11px;color:#1F2430">{{ confirmTarget }}</div>
+        </div>
+        <div style="padding:12px 16px;background:#F7F8FB;border-top:1px solid #EFF0F5;display:flex;gap:8px;justify-content:flex-end">
+          <div onClick="{{ closeConfirm }}" style="font-size:12.5px;font-weight:700;padding:8px 13px;border:1px solid #EFF0F5;border-radius:11px;cursor:pointer;background:#FFFFFF" style-hover="background:#EFF0F5">Cancel</div>
+          <div onClick="{{ closeConfirm }}" style="font-size:12.5px;font-weight:700;padding:8px 13px;border-radius:11px;cursor:pointer;background:#EF4444;color:#FFFFFF" style-hover="background:#B42318">{{ confirmCta }}</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:1024},&quot;alertsClear&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;},&quot;zeroStores&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;States&quot;},&quot;railState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;loading&quot;,&quot;failed&quot;],&quot;default&quot;:&quot;normal&quot;,&quot;tsType&quot;:&quot;'normal'|'loading'|'failed'&quot;,&quot;section&quot;:&quot;States&quot;}}">
+const OK='#15803D', OKBG='#DCFCE7', WARN='#B45309', WARNBG='#FEF3C7', BAD='#B42318', BADBG='#FEE4E2', INK='#1F2430', MUT='#5A6070', TEAL='#1F2430';
+
+class Component extends DCLogic {
+  state = {
+    screen: 'overview', range: '24h', attention: false,
+    palette: false, query: '', confirm: null, store: 'Nakheel Perfumes'
+  };
+
+  componentDidMount() {
+    this._k = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState({ palette: true }); }
+      if (e.key === 'Escape') this.setState({ palette: false, confirm: null });
+    };
+    window.addEventListener('keydown', this._k);
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this._k); }
+
+  go = (screen) => () => this.setState({ screen, palette: false });
+  openStore = (name) => () => this.setState({ screen: 'store', store: name, palette: false });
+
+  renderVals() {
+    const s = this.state;
+    const p = this.props;
+    const alertsClear = p.alertsClear ?? false;
+    const zeroStores = p.zeroStores ?? false;
+    const rail = p.railState ?? 'normal';
+
+    const titles = {
+      overview: ['Overview', 'Morning check · 312 stores across 2 platforms · all times Asia/Amman unless marked'],
+      stores: ['Stores', 'Every merchant, sortable and filterable · click a row for the full record'],
+      store: [s.store, 'Single merchant record · read-only above, write actions in the red panel'],
+      health: ['Health', 'Queues, failures and the webhook path · opened when something is wrong'],
+      revenue: ['Revenue', 'MRR, plan and platform mix, conversion, churn and cohort retention · SAR'],
+      queues: ['Review queues', 'Mapping decisions that keep the numbers correct · finishable by design'],
+      mobile: ['Narrow overview', 'The phone check · read-only, overview only']
+    };
+
+    const spark = (a) => a;
+    const withSpark = (a) => a.map(o => ({ ...o, sparkColor: o.sparkOn, cardBg:'#FFFFFF', cardBorder:'#EFF0F5' }));
+    const platforms = withSpark([
+      { name:'Salla', state:'LIVE', stateFg:'#15803D', stateBg:'#DCFCE7', dot:'#F5A04A', dotHalo:'#DCFCE7', hook:'99.4%', queue:'1,204', failed:'12', failFg:'#1F2430', lag:'lag 40s', absolute:'Median end-to-end lag, 24h window',
+        spark:[8,11,9,13,10,12,14,11,9,12,15,13,11,14], sparkOn:'#15803D' },
+      { name:'Zid', state:'DEGRADED', stateFg:'#B45309', stateBg:'#FEF3C7', dot:'#F59E0B', dotHalo:'#FEF3C7', hook:'91.7%', queue:'8,430', failed:'214', failFg:'#B42318', lag:'lag 14m', absolute:'Median end-to-end lag, 24h window',
+        spark:[14,12,15,10,7,6,9,5,8,4,6,5,7,4], sparkOn:'#B45309' },
+      { name:'Workers', state:'OK', stateFg:'#15803D', stateBg:'#DCFCE7', dot:'#F5A04A', dotHalo:'#DCFCE7', hook:'6 / 6', queue:'0 idle', failed:'0', failFg:'#1F2430', lag:'p95 820ms', absolute:'Worker pool health',
+        spark:[10,10,11,10,12,11,10,11,12,10,11,11,10,12], sparkOn:'#5B5FE0' },
+      { name:'Nightly recon', state:'ATTENTION', stateFg:'#B42318', stateBg:'#FEE4E2', dot:'#EF4444', dotHalo:'#FEE4E2', hook:'418', queue:'3 runs', failed:'+37%', failFg:'#B42318', lag:'02:00 daily', absolute:'Corrections made in the last run',
+        spark:[4,5,4,6,5,7,6,8,9,8,11,12,13,15], sparkOn:'#B42318' }
+    ]);
+
+    const alerts = [
+      { glyph:'!', iconBg:BADBG, iconFg:BAD, bar:'#EF4444', sev:'CRITICAL', sevFg:BAD, sevBg:BADBG, title:'No webhooks received in 31h', detail:'Last event: orders.created · signature valid · store still installed', store:'Layan Cosmetics', when:'31h ago', absolute:'4 Sep 2026, 07:12 Asia/Amman' },
+      { glyph:'!', iconBg:BADBG, iconFg:BAD, bar:'#EF4444', sev:'CRITICAL', sevFg:BAD, sevBg:BADBG, title:'Zid webhook success rate 91.7%', detail:'214 failures in 24h, concentrated in orders.updated · signature verification', store:'Zid platform', when:'ongoing 5h', absolute:'Started 5 Sep 2026, 09:20 Asia/Amman' },
+      { glyph:'~', iconBg:WARNBG, iconFg:WARN, bar:'#F59E0B', sev:'HIGH', sevFg:WARN, sevBg:WARNBG, title:'Backfill stuck at 62% for 9h', detail:'Worker lost its lease mid-page; no retry scheduled', store:'Nakheel Perfumes', when:'9h ago', absolute:'5 Sep 2026, 05:04 Asia/Amman' },
+      { glyph:'~', iconBg:WARNBG, iconFg:WARN, bar:'#F59E0B', sev:'HIGH', sevFg:WARN, sevBg:WARNBG, title:'Cost coverage dropped 78% → 34%', detail:'412 new SKUs imported without cost · profit numbers now unreliable', store:'Bayt Al Attar', when:'2d ago', absolute:'3 Sep 2026, 18:40 Asia/Amman' },
+      { glyph:'$', iconBg:WARNBG, iconFg:WARN, bar:'#F59E0B', sev:'BILLING', sevFg:WARN, sevBg:WARNBG, title:'6 subscriptions past due', detail:'Oldest 11 days · Salla billing reconciliation succeeded, payment failed upstream', store:'6 stores', when:'11d ago', absolute:'25 Aug 2026, 03:00 Asia/Amman' },
+      { glyph:'#', iconBg:'#EFF0F5', iconFg:'#5A6070', bar:'#A6ABBA', sev:'WATCH', sevFg:'#5A6070', sevBg:'#F5F6FA', title:'Order cap exceeded on 3 stores', detail:'Ingestion continues; overage not billed until next period close', store:'3 stores', when:'today', absolute:'5 Sep 2026, 00:00 Asia/Amman' }
+    ].map(a => ({ ...a, open: this.openStore(a.store) }));
+
+    const funnel = [
+      { step:'Installed', n:'312', drop:'—', dropFg:MUT, w:'100%', fill:'#1F2430' },
+      { step:'Backfill complete', n:'287', drop:'−8%', dropFg:MUT, w:'92%', fill:'#1F2430' },
+      { step:'Cost data entered', n:'196', drop:'−32%', dropFg:BAD, w:'63%', fill:'#EF4444' },
+      { step:'Activated (7d active)', n:'204', drop:'−29%', dropFg:MUT, w:'65%', fill:'#22C55E' },
+      { step:'Paid', n:'184', drop:'−10%', dropFg:MUT, w:'59%', fill:'#22C55E' }
+    ];
+
+    const installs = [
+      { name:'Souq Al Yasmine', platform:'Salla', stage:'Backfilling 41%', when:'2h', absolute:'5 Sep 2026, 12:10 Asia/Amman' },
+      { name:'Dar Al Oud', platform:'Salla', stage:'Cost data 12%', when:'6h', absolute:'5 Sep 2026, 08:24 Asia/Amman' },
+      { name:'Mira Kids', platform:'Zid', stage:'Activated', when:'1d', absolute:'4 Sep 2026, 15:02 Asia/Amman' },
+      { name:'Hijaz Coffee Roasters', platform:'Salla', stage:'No cost data', when:'2d', absolute:'3 Sep 2026, 10:47 Asia/Amman' },
+      { name:'Rawan Abaya House', platform:'Salla', stage:'Trialing', when:'3d', absolute:'2 Sep 2026, 19:31 Asia/Amman' }
+    ];
+    const churns = [
+      { name:'Talal Electronics', tenure:'4 mo', coverage:'cov 9%', covFg:BAD, mrr:'−499' },
+      { name:'Nour Home', tenure:'2 mo', coverage:'cov 21%', covFg:BAD, mrr:'−299' },
+      { name:'Sahara Sports', tenure:'7 mo', coverage:'cov 64%', covFg:MUT, mrr:'−299' },
+      { name:'Zahra Beauty', tenure:'1 mo', coverage:'cov 0%', covFg:BAD, mrr:'−149' },
+      { name:'Faisal Watches', tenure:'11 mo', coverage:'cov 88%', covFg:OK, mrr:'−94' }
+    ];
+
+    const ranges = ['24h','7d','30d','90d'].map(t => ({
+      t, pick: () => this.setState({ range: t }),
+      bg: s.range === t ? '#5B5FE0' : 'transparent',
+      fg: s.range === t ? '#FFFFFF' : '#5A6070'
+    }));
+
+    const st = (k) => ({
+      paid:{ status:'PAID', stBg:OKBG, stFg:OK },
+      trial:{ status:'TRIALING', stBg:'#EFF0F5', stFg:TEAL },
+      due:{ status:'PAST DUE', stBg:BADBG, stFg:BAD },
+      cancel:{ status:'CANCELED', stBg:'#EFF0F5', stFg:MUT }
+    })[k];
+
+    const mk = (o) => {
+      const bad = o.level === 'bad', warn = o.level === 'warn';
+      return {
+        ...o, ...st(o.s),
+        rowBg: bad ? '#FEF5F4' : warn ? '#FFFBF0' : '#FFFFFF',
+        bar: bad ? '#EF4444' : warn ? '#F59E0B' : 'transparent',
+        mark: bad ? '▲' : warn ? '▲' : '',
+        markFg: bad ? BAD : WARN,
+        capFill: o.capPct > 100 ? '#EF4444' : o.capPct > 85 ? '#F59E0B' : '#1F2430',
+        capW: Math.min(o.capPct, 100) + '%',
+        capFg: o.capPct > 100 ? BAD : INK,
+        cap: o.capPct + '%',
+        covFg: o.covPct < 40 ? BAD : o.covPct < 70 ? WARN : INK,
+        coverage: o.covPct + '%',
+        hookFg: o.silent ? BAD : MUT,
+        hDot: bad ? '#EF4444' : warn ? '#F59E0B' : '#22C55E',
+        hFg: bad ? BAD : warn ? WARN : MUT,
+        open: this.openStore(o.name)
+      };
+    };
+
+    let stores = [
+      mk({ name:'Layan Cosmetics', domain:'layan.sa', platform:'Salla', plan:'Growth', s:'paid', installed:'12 Mar 2026', installedAbs:'12 Mar 2026, 14:20 Asia/Riyadh', orders:'4,182', capPct:84, covPct:92, lastHook:'31h', hookAbs:'4 Sep 2026, 07:12 Asia/Amman', silent:true, health:'Silent', level:'bad' }),
+      mk({ name:'Nakheel Perfumes', domain:'nakheel-perfume.com', platform:'Salla', plan:'Growth', s:'paid', installed:'02 Jul 2026', installedAbs:'2 Jul 2026, 09:11 Asia/Riyadh', orders:'2,904', capPct:61, covPct:31, lastHook:'2h', hookAbs:'5 Sep 2026, 11:40 Asia/Amman', health:'Backfill stuck', level:'warn' }),
+      mk({ name:'Bayt Al Attar', domain:'baytalattar.sa', platform:'Salla', plan:'Scale', s:'paid', installed:'18 Jan 2026', installedAbs:'18 Jan 2026, 11:02 Asia/Riyadh', orders:'11,740', capPct:104, covPct:34, lastHook:'4m', hookAbs:'5 Sep 2026, 14:20 Asia/Amman', health:'Over cap · low cov', level:'bad' }),
+      mk({ name:'Talal Electronics', domain:'talal.store', platform:'Zid', plan:'Growth', s:'due', installed:'05 May 2026', installedAbs:'5 May 2026, 16:44 Asia/Riyadh', orders:'3,318', capPct:72, covPct:9, lastHook:'12m', hookAbs:'5 Sep 2026, 14:12 Asia/Amman', health:'Past due', level:'bad' }),
+      mk({ name:'Hijaz Coffee Roasters', domain:'hijazroasters.com', platform:'Salla', plan:'Starter', s:'trial', installed:'03 Sep 2026', installedAbs:'3 Sep 2026, 10:47 Asia/Riyadh', orders:'168', capPct:17, covPct:0, lastHook:'9m', hookAbs:'5 Sep 2026, 14:15 Asia/Amman', health:'Zero coverage', level:'warn' }),
+      mk({ name:'Mira Kids', domain:'mirakids.sa', platform:'Zid', plan:'Growth', s:'paid', installed:'04 Sep 2026', installedAbs:'4 Sep 2026, 15:02 Asia/Riyadh', orders:'742', capPct:38, covPct:76, lastHome:'', lastHook:'1m', hookAbs:'5 Sep 2026, 14:23 Asia/Amman', health:'Healthy', level:'ok' }),
+      mk({ name:'Faisal Watches', domain:'faisalwatches.com', platform:'Salla', plan:'Scale', s:'paid', installed:'21 Oct 2025', installedAbs:'21 Oct 2025, 12:30 Asia/Riyadh', orders:'9,014', capPct:55, covPct:88, lastHook:'2m', hookAbs:'5 Sep 2026, 14:22 Asia/Amman', health:'Healthy', level:'ok' }),
+      mk({ name:'Souq Al Yasmine', domain:'yasmine.sa', platform:'Salla', plan:'Starter', s:'trial', installed:'05 Sep 2026', installedAbs:'5 Sep 2026, 12:10 Asia/Riyadh', orders:'41', capPct:4, covPct:0, lastHook:'40s', hookAbs:'5 Sep 2026, 14:23 Asia/Amman', health:'Backfilling 41%', level:'ok' }),
+      mk({ name:'Rawan Abaya House', domain:'rawan-abaya.com', platform:'Salla', plan:'Starter', s:'trial', installed:'02 Sep 2026', installedAbs:'2 Sep 2026, 19:31 Asia/Riyadh', orders:'214', capPct:21, covPct:44, lastHook:'6m', hookAbs:'5 Sep 2026, 14:18 Asia/Amman', health:'Healthy', level:'ok' }),
+      mk({ name:'Dar Al Oud', domain:'daraloud.sa', platform:'Salla', plan:'Growth', s:'trial', installed:'05 Sep 2026', installedAbs:'5 Sep 2026, 08:24 Asia/Riyadh', orders:'96', capPct:9, covPct:12, lastHook:'3m', hookAbs:'5 Sep 2026, 14:21 Asia/Amman', health:'Low coverage', level:'warn' }),
+      mk({ name:'Nour Home', domain:'nourhome.sa', platform:'Zid', plan:'Growth', s:'due', installed:'14 Jun 2026', installedAbs:'14 Jun 2026, 10:00 Asia/Riyadh', orders:'1,806', capPct:47, covPct:21, lastHook:'2d', hookAbs:'3 Sep 2026, 13:02 Asia/Amman', silent:true, health:'Silent · past due', level:'bad' }),
+      mk({ name:'Sahara Sports', domain:'saharasports.com', platform:'Salla', plan:'Scale', s:'paid', installed:'09 Feb 2026', installedAbs:'9 Feb 2026, 08:18 Asia/Riyadh', orders:'7,455', capPct:112, covPct:64, lastHook:'1m', hookAbs:'5 Sep 2026, 14:23 Asia/Amman', health:'Over cap', level:'warn' }),
+      mk({ name:'Zahra Beauty', domain:'zahra.beauty', platform:'Zid', plan:'Starter', s:'cancel', installed:'28 Jul 2026', installedAbs:'28 Jul 2026, 21:40 Asia/Riyadh', orders:'0', capPct:0, covPct:0, lastHook:'6d', hookAbs:'30 Aug 2026, 04:11 Asia/Amman', silent:true, health:'Churned', level:'bad' }),
+      mk({ name:'Qasr Al Sharq Home', domain:'qasralsharq.sa', platform:'Salla', plan:'Growth', s:'paid', installed:'30 Apr 2026', installedAbs:'30 Apr 2026, 17:55 Asia/Riyadh', orders:'5,231', capPct:66, covPct:81, lastHook:'2m', hookAbs:'5 Sep 2026, 14:22 Asia/Amman', health:'Healthy', level:'ok' })
+    ];
+    if (s.attention) stores = stores.filter(x => x.level !== 'ok');
+    if (zeroStores) stores = [];
+
+    const chipDefs = [['Trialing',37],['Over cap',3],['Past due',6],['Low coverage',48],['Silent',4],['+ Save this view','']];
+    const chips = chipDefs.map(([t,n], i) => ({
+      t, n, pick: () => this.setState({ attention: i < 5 }),
+      border: i === 5 ? '#E6E8EF' : '#EFF0F5',
+      bg: i === 5 ? '#FFFFFF' : '#EFF0F5',
+      fg: i === 5 ? TEAL : INK
+    }));
+
+    const results = [
+      { name:'Nakheel Perfumes', domain:'nakheel-perfume.com', platform:'Salla', dot:'#F59E0B' },
+      { name:'Nour Home', domain:'nourhome.sa', platform:'Zid', dot:'#EF4444' },
+      { name:'Layan Cosmetics', domain:'layan.sa', platform:'Salla', dot:'#EF4444' },
+      { name:'Bayt Al Attar', domain:'baytalattar.sa', platform:'Salla', dot:'#EF4444' },
+      { name:'Faisal Watches', domain:'faisalwatches.com', platform:'Salla', dot:'#22C55E' },
+      { name:'Mira Kids', domain:'mirakids.sa', platform:'Zid', dot:'#22C55E' },
+      { name:'Sahara Sports', domain:'saharasports.com', platform:'Salla', dot:'#F59E0B' }
+    ].filter(r => r.name.toLowerCase().includes(s.query.toLowerCase()))
+     .map(r => ({ ...r, open: this.openStore(r.name) }));
+
+    const bars = (arr, colFn) => arr.map(v => ({ h: v, c: colFn(v) }));
+    const ingestSeries = bars([22,26,30,24,28,32,30,26,20,14,10,8,6,9,12,16,20,24,28,30,26,22,18,20], v => v < 12 ? '#FECDCA' : '#E6E8EF');
+    const activitySeries = [64,72,58,80,44,90,76,68,52,88,70,62,74,58,66,80,92,54,70,64,48,60,76,82,58,44,30,22,18,14]
+      .map(v => ({ h: v, c: v < 30 ? '#FECDCA' : '#E6E8EF' }));
+    const queueSeries = Array.from({ length: 36 }, (_, i) => {
+      const z = 6 + Math.round(28 * Math.pow(i / 35, 2.2));
+      return { s: 14 + (i % 5) * 2, z, r: i > 24 ? Math.round((i - 24) * 1.8) : 1 };
+    });
+    const reconSeries = [26,30,24,34,28,40,36,48,44,58,62,74,86,100].map(v => ({ h: v, c: v > 70 ? '#F59E0B' : '#A6ABBA' }));
+
+    const actions = [
+      { t:'Recompute profit records', d:'Rebuilds 8,914 records from current cost data · ~4 min' },
+      { t:'Re-run backfill from 62%', d:'Resumes at the lost page; safe to repeat' },
+      { t:'Replay a webhook event', d:'Pick an event ID from the last 7 days' },
+      { t:'Force subscription reconciliation', d:'Pulls truth from Salla billing and overwrites local state' }
+    ].map(a => ({ ...a, run: () => this.setState({ confirm: a }) }));
+
+    const jobs = [
+      { job:'ingest.orders.page', err:'ZidApiError 502 · upstream gateway', store:'Nour Home', retries:'7', rFg:BAD, when:'12m', absolute:'5 Sep 2026, 14:11 Asia/Amman' },
+      { job:'webhook.verify', err:'SignatureMismatch · rotated secret?', store:'Talal Electronics', retries:'4', rFg:BAD, when:'26m', absolute:'5 Sep 2026, 13:58 Asia/Amman' },
+      { job:'backfill.resume', err:'LeaseLost after 9h idle', store:'Nakheel Perfumes', retries:'0', rFg:INK, when:'9h', absolute:'5 Sep 2026, 05:04 Asia/Amman' },
+      { job:'profit.compute', err:'MissingCost sku=4821 (+411 more)', store:'Bayt Al Attar', retries:'2', rFg:WARN, when:'1h', absolute:'5 Sep 2026, 13:20 Asia/Amman' },
+      { job:'subscription.sync', err:'SallaBilling 429 · rate limited', store:'6 stores', retries:'3', rFg:WARN, when:'3h', absolute:'5 Sep 2026, 11:02 Asia/Amman' },
+      { job:'shipment.enrich', err:'CarrierTimeout · aramex', store:'Sahara Sports', retries:'1', rFg:INK, when:'5h', absolute:'5 Sep 2026, 09:14 Asia/Amman' }
+    ].map(j => ({ ...j, retry: () => this.setState({ confirm: { t:'Retry ' + j.job, d:'Re-enqueues this job at the head of the retry queue.' } }) }));
+
+    const healthStats = [
+      { label:'Events received', v:'218k', sub:'across both platforms', fg:INK },
+      { label:'Processed', v:'214k', sub:'98.2% of received', fg:INK },
+      { label:'Dropped stale', v:'2,104', sub:'older than the 5m window', fg:WARN },
+      { label:'Signature failures', v:'318', sub:'Zid, single secret', fg:BAD },
+      { label:'Failed jobs', v:'47', sub:'11 above retry threshold', fg:BAD }
+    ];
+    const webhookRows = [
+      { label:'Received', v:'218,412', pct:'100%', dot:'#1F2430', fg:INK },
+      { label:'Processed', v:'214,586', pct:'98.2%', dot:'#22C55E', fg:OK },
+      { label:'Dropped as stale', v:'2,104', pct:'1.0%', dot:'#F59E0B', fg:WARN },
+      { label:'Signature failed', v:'318', pct:'0.1%', dot:'#EF4444', fg:BAD },
+      { label:'Handler errors', v:'1,404', pct:'0.6%', dot:'#EF4444', fg:BAD }
+    ];
+    const apiRows = [
+      { name:'Salla orders', err:'0.2%', eFg:INK, limit:'4', lFg:INK },
+      { name:'Salla billing', err:'1.1%', eFg:WARN, limit:'62', lFg:WARN },
+      { name:'Zid orders', err:'6.4%', eFg:BAD, limit:'218', lFg:BAD }
+    ];
+    const quality = [
+      { label:'SKUs missing cost', v:'412', fg:BAD },
+      { label:'Orders with estimated shipping', v:'1,208', fg:WARN },
+      { label:'Orders with estimated fees', v:'2,940', fg:WARN },
+      { label:'Orders fully costed', v:'38%', fg:BAD }
+    ];
+    const planHistory = [
+      { event:'Growth · 299 SAR/mo', when:'18 Jul 2026', absolute:'18 Jul 2026, 03:00 Asia/Amman', dot:'#22C55E' },
+      { event:'Trial started (14d)', when:'02 Jul 2026', absolute:'2 Jul 2026, 09:11 Asia/Amman', dot:'#1F2430' },
+      { event:'Payment retried, succeeded', when:'01 Aug 2026', absolute:'1 Aug 2026, 03:04 Asia/Amman', dot:'#F59E0B' },
+      { event:'Renewed', when:'01 Sep 2026', absolute:'1 Sep 2026, 03:00 Asia/Amman', dot:'#22C55E' }
+    ];
+
+    const byPlan = [
+      { name:'Scale', price:'699 SAR', stores:38, mrr:'26,562', share:'55%', w:'55%', fill:'#1F2430' },
+      { name:'Growth', price:'299 SAR', stores:104, mrr:'17,236', share:'36%', w:'36%', fill:'#F5A04A' },
+      { name:'Starter', price:'99 SAR', stores:42, mrr:'4,322', share:'9%', w:'9%', fill:'#C7C9F7' }
+    ];
+    const byPlatform = [
+      { name:'Salla', stores:158, mrr:'43,180', share:'90%', w:'90%', fill:'#1F2430' },
+      { name:'Zid', stores:26, mrr:'4,940', share:'10%', w:'10%', fill:'#C7C9F7' }
+    ];
+    const convSeries = [
+      ['Jan',42],['Feb',44],['Mar',47],['Apr',45],['May',51],['Jun',54],['Jul',52],['Aug',56],['Sep',58]
+    ].map(([m,v], i, arr) => ({ m, h: v, c: i === arr.length - 1 ? '#1F2430' : '#C7C9F7' }));
+
+    const churnRows = [
+      { name:'Talal Electronics', plan:'Growth', tenure:'4 mo', coverage:'9%', covFg:BAD, mrr:'−499', when:'2d ago', absolute:'3 Sep 2026, 03:00 Asia/Amman' },
+      { name:'Nour Home', plan:'Growth', tenure:'2 mo', coverage:'21%', covFg:BAD, mrr:'−299', when:'6d ago', absolute:'30 Aug 2026, 03:00 Asia/Amman' },
+      { name:'Sahara Sports', plan:'Growth', tenure:'7 mo', coverage:'64%', covFg:WARN, mrr:'−299', when:'11d ago', absolute:'25 Aug 2026, 03:00 Asia/Amman' },
+      { name:'Zahra Beauty', plan:'Starter', tenure:'1 mo', coverage:'0%', covFg:BAD, mrr:'−149', when:'18d ago', absolute:'18 Aug 2026, 03:00 Asia/Amman' },
+      { name:'Faisal Watches', plan:'Starter', tenure:'11 mo', coverage:'88%', covFg:INK, mrr:'−94', when:'24d ago', absolute:'12 Aug 2026, 03:00 Asia/Amman' }
+    ].map(c => ({ ...c, open: this.openStore(c.name) }));
+
+    const cohortCols = ['M0','M1','M2','M3','M4','M5','M6','M7','M8','M9'];
+    const cohortRaw = [
+      ['Dec 25', 18, [100,94,89,89,83,83,78,78,72,72]],
+      ['Jan 26', 24, [100,92,88,83,79,75,75,71,67]],
+      ['Feb 26', 27, [100,89,85,81,78,74,70,67]],
+      ['Mar 26', 31, [100,90,84,81,74,71,68]],
+      ['Apr 26', 34, [100,88,82,76,71,68]],
+      ['May 26', 39, [100,87,79,74,69]],
+      ['Jun 26', 44, [100,84,77,70]],
+      ['Jul 26', 47, [100,81,72]],
+      ['Aug 26', 39, [100,79]],
+      ['Sep 26', 9, [100]]
+    ];
+    const shade = (v) => v >= 90 ? ['#4A4ECB','#FFFFFF'] : v >= 80 ? ['#7A7DE8','#FFFFFF'] : v >= 72 ? ['#C7C9F7','#3A3D9E'] : ['#EEF0FD','#4A4ECB'];
+    const cohorts = cohortRaw.map(([label, n, vals]) => ({
+      label, n,
+      cells: cohortCols.map((_, i) => {
+        if (vals[i] === undefined) return { v: '', bg: '#F7F8FB', fg: '#5A6070' };
+        const [bg, fg] = shade(vals[i]);
+        return { v: vals[i] + '%', bg, fg };
+      })
+    }));
+
+    const payQueue = [
+      { raw:'mada_apple_pay', platform:'Salla', context:'first seen 3d ago · 4 stores · maps cleanly to Apple Pay', count:'1,482', suggestion:'Apple Pay' },
+      { raw:'TAMARA_INSTALLMENT_3', platform:'Salla', context:'BNPL · fee schedule differs from Tamara pay-in-full', count:'914', suggestion:'BNPL' },
+      { raw:'cod-cash', platform:'Zid', context:'cash on delivery variant · courier collects', count:'702', suggestion:'Cash on delivery' },
+      { raw:'stc_pay_wallet', platform:'Salla', context:'wallet · 1.9% + 1 SAR per transaction', count:'488', suggestion:'Wallet' },
+      { raw:'bank_transfer_manual', platform:'Zid', context:'manual reconciliation, no gateway fee', count:'211', suggestion:'Bank transfer' },
+      { raw:'urway_visa', platform:'Salla', context:'gateway-prefixed card label · 6 stores', count:'168', suggestion:'Card' },
+      { raw:'null', platform:'Zid', context:'missing field on 2 orders · likely a partial payload', count:'2', suggestion:'Unknown' }
+    ].map(q => ({
+      ...q,
+      map: () => this.setState({ confirm: { t:'Map ' + q.raw + ' → ' + q.suggestion, d:'Applies to ' + q.count + ' historical orders and every future order carrying this label. Profit records for affected orders are recomputed.' } }),
+      dismiss: () => this.setState({ confirm: { t:'Dismiss ' + q.raw, d:'Leaves these orders mapped to “Other”. The label stops appearing in this queue.' } })
+    }));
+    const campQueue = [
+      { raw:'utm_campaign=ramadan_24_retarget', platform:'Meta', context:'spend present, no matching campaign record', count:'3,204' },
+      { raw:'gclid-only session', platform:'Google', context:'no utm parameters · needs click-id join', count:'1,118' },
+      { raw:'tiktok_bulk_upload_7', platform:'TikTok', context:'ad set renamed after export', count:'640' }
+    ];
+
+    const d = stores.find(x => x.name === s.store) || { name: s.store, domain:'nakheel-perfume.com', platform:'Salla', plan:'Growth', status:'PAID', stBg:OKBG, stFg:OK, installed:'02 Jul 2026' };
+
+    return {
+      screenTitle: (titles[s.screen] || titles.overview)[0],
+      screenSub: (titles[s.screen] || titles.overview)[1],
+      atOverview: s.screen === 'overview', atStores: s.screen === 'stores',
+      atStore: s.screen === 'store', atHealth: s.screen === 'health',
+      atRevenue: s.screen === 'revenue', atQueues: s.screen === 'queues', atMobile: s.screen === 'mobile',
+      goMobile: this.go('mobile'),
+      navRevenueC: s.screen === 'revenue' ? '#3A3D9E' : '#5A6070',
+      navQueuesC: s.screen === 'queues' ? '#3A3D9E' : '#5A6070',
+      navMobileC: s.screen === 'mobile' ? '#3A3D9E' : '#5A6070',
+      navRevenueW: s.screen === 'revenue' ? 700 : 500,
+      navQueuesW: s.screen === 'queues' ? 700 : 500,
+      navMobileW: s.screen === 'mobile' ? 700 : 500,
+      byPlan, byPlatform, convSeries, churnRows, cohortCols, cohorts,
+      payQueue, payQueueLeft: payQueue.length, payQueueDone: 12,
+      payQueuePct: Math.round(12 / (12 + payQueue.length) * 100) + '%',
+      payQueueEmpty: payQueue.length === 0, campQueue,
+      mobilePlatforms: platforms.slice(0, 3), mobileAlerts: alerts.slice(0, 4),
+      mobileFunnel: funnel.map(f => ({ n: f.n, step: f.step.split(' ')[0] })),
+      goOverview: this.go('overview'), goStores: this.go('stores'), goHealth: this.go('health'),
+      goRevenue: this.go('revenue'), goQueues: this.go('queues'),
+      navOverviewW: s.screen === 'overview' ? 700 : 500,
+      navStoresW: s.screen === 'stores' ? 700 : 500,
+      navHealthW: s.screen === 'health' ? 700 : 500,
+      navOverviewC: s.screen === 'overview' ? '#3A3D9E' : '#5A6070',
+      navStoresC: s.screen === 'stores' ? '#3A3D9E' : '#5A6070',
+      navHealthC: s.screen === 'health' ? '#3A3D9E' : '#5A6070',
+      range: s.range, ranges, updatedAgo: '2m ago', refresh: () => this.forceUpdate(),
+      platforms, alerts, funnel, installs, churns,
+      hasAlerts: !alertsClear, alertsClear,
+      railNormal: rail === 'normal', railLoading: rail === 'loading', railFailed: rail === 'failed',
+      stores, zeroStores, chips, shownCount: stores.length,
+      selects: [{ label:'Platform', value:'All' }, { label:'Plan', value:'All' }, { label:'Status', value:'All' }],
+      toggleAttention: () => this.setState({ attention: !s.attention }),
+      attnBorder: s.attention ? '#1F2430' : '#EFF0F5',
+      attnBg: s.attention ? '#EFF0F5' : '#FFFFFF',
+      attnTrack: s.attention ? '#1F2430' : '#E6E8EF',
+      attnJustify: s.attention ? 'flex-end' : 'flex-start',
+      detail: d, planHistory, quality, actions, ingestSeries, activitySeries,
+      queueSeries, reconSeries, jobs, healthStats, webhookRows, apiRows,
+      paletteOpen: s.palette, query: s.query, results,
+      openPalette: () => this.setState({ palette: true, query: '' }),
+      closePalette: () => this.setState({ palette: false }),
+      setQuery: (e) => this.setState({ query: e.target.value }),
+      stop: (e) => e.stopPropagation(),
+      confirmOpen: !!s.confirm,
+      confirmTitle: s.confirm ? s.confirm.t : '',
+      confirmBody: s.confirm ? s.confirm.d + ' This runs against production immediately and cannot be undone from this console.' : '',
+      confirmTarget: s.confirm ? 'target: ' + s.store + ' · operator: you · ' + new Date().toISOString().slice(0,16).replace('T',' ') + ' UTC' : '',
+      confirmCta: 'Run it',
+      closeConfirm: () => this.setState({ confirm: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

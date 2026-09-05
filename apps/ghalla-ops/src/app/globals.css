@@ -1,0 +1,228 @@
+@import 'tailwindcss';
+
+/*
+ * The design system, in one place.
+ *
+ * Tailwind v4 has no `tailwind.config.ts` — `@theme` IS the config. Every
+ * entry below becomes both a CSS custom property and a utility class, so
+ * `--color-bad-row` is usable as `bg-bad-row` and there is never a reason to
+ * write a hex literal in a component. That is the whole point of the block: a
+ * colour that appears in markup cannot be checked against the handoff, and a
+ * colour that appears here can.
+ *
+ * Names are ROLES, not appearances. `--color-bad` rather than `--color-red`,
+ * because the next design revision can change the hue of a danger state and
+ * must not have to change every component that uses it.
+ *
+ * Single-theme by design. This is an internal console with one operator and a
+ * fixed visual identity; a dark variant would be invention, not implementation.
+ */
+@theme {
+  /* ---------------------------------------------------------- surfaces -- */
+  --color-ground: #f5f6fa; /* page ground, behind the cards */
+  --color-shell: #edeef3; /* outer body ground, and the sidebar's own fills */
+  --color-surface: #ffffff; /* card */
+  --color-rail: #fbfbfd; /* sidebar */
+  --color-line: #eff0f5; /* card border, and dividers inside a card */
+  --color-rule: #f2f3f7; /* the lighter rule BETWEEN table rows */
+  --color-subtle: #f5f6fa; /* table head, chip grounds */
+  --color-subtle-alt: #f7f8fb;
+  --color-track: #e6e8ef; /* the unfilled part of any bar */
+
+  /* -------------------------------------------------------------- ink --- */
+  --color-ink: #1f2430;
+  --color-muted: #5a6070; /* never lighter than this on a white ground: 4.5:1 */
+  --color-faint: #a6abba; /* icons and tertiary marks only, never body text */
+
+  /* ---------------------------------------------------------- primary -- */
+  --color-primary: #5b5fe0;
+  --color-primary-hover: #4a4ecb;
+  --color-primary-deep: #3a3d9e;
+  --color-primary-tint: #eef0fd;
+
+  /* The indigo hero cards, which invert the whole relationship. */
+  --color-accent-surface: #4a4ecb;
+  --color-accent-ink: #ffffff;
+  --color-accent-muted: #e8e9fd; /* the 4.5:1 floor ON the indigo ground */
+  --color-accent-line: #6b6fe3;
+
+  /* ---------------------------------------------------------- semantic -- */
+  /*
+   * Three families, each with a text colour, a fill for chips, a saturated dot
+   * for status marks, and — for the two problem states — a row tint. The row
+   * tints are deliberately close to white: they mark a row without making a
+   * table look like a heat map, and they are never the ONLY signal (see the
+   * left bar and the ▲ marker in the store table).
+   */
+  --color-ok: #15803d;
+  --color-ok-fill: #dcfce7;
+  --color-ok-dot: #22c55e;
+
+  --color-warn: #b45309;
+  --color-warn-fill: #fef3c7;
+  --color-warn-dot: #f59e0b;
+  --color-warn-row: #fffbf0;
+
+  --color-bad: #b42318;
+  --color-bad-fill: #fee4e2;
+  --color-bad-dot: #ef4444;
+  --color-bad-row: #fef5f4;
+  --color-bad-badge: #d92d20; /* solid count badges, which need white on them */
+  --color-bad-on-accent: #fecdca; /* danger read ON the indigo card */
+
+  --color-info: #3a3d9e;
+  --color-info-fill: #eef0fd;
+
+  /* ----------------------------------------------------------- series --- */
+  /* Chart series only. Not status — a chart's second line is not a warning. */
+  --color-series-indigo: #5b5fe0;
+  --color-series-indigo-soft: #c7c9f7;
+  --color-series-orange: #f5a04a;
+  --color-series-orange-soft: #fbc98a;
+
+  /* ------------------------------------------------------------ type --- */
+  /*
+   * Loaded through `next/font/google` in the root layout, which self-hosts and
+   * subsets them at build time. The CDN link the handoff uses would be a
+   * render-blocking third-party request on an internal tool, and a font that
+   * fails to load silently changes every column width on this console.
+   */
+  --font-sans: var(--font-montserrat), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, 'SF Mono', monospace;
+
+  /*
+   * The scale, with its half-pixel steps intact.
+   *
+   * They look like noise and they are not: at 9.5–13px a half pixel is a real
+   * difference in a dense table, and rounding the scale to whole pixels moves
+   * every column. Named by ROLE so a component asks for `text-cell` rather
+   * than picking a number.
+   */
+  --text-kicker: 9.5px; /* caps section labels, weight 800 */
+  --text-kicker--line-height: 1.2;
+  --text-chip: 10.5px; /* chips and badges, weight 800 */
+  --text-chip--line-height: 1.2;
+  --text-meta: 11px; /* timestamps, secondary counts */
+  --text-meta--line-height: 1.35;
+  --text-meta-lg: 11.5px;
+  --text-meta-lg--line-height: 1.35;
+  --text-cell: 12px; /* table cells and list rows */
+  --text-cell--line-height: 1.35;
+  --text-cell-lg: 12.5px;
+  --text-cell-lg--line-height: 1.35;
+  --text-title: 13px; /* card titles, nav labels */
+  --text-title--line-height: 1.3;
+  --text-section: 14px;
+  --text-section--line-height: 1.25;
+  --text-section-lg: 15px;
+  --text-section-lg--line-height: 1.25;
+  --text-screen: 18px; /* the topbar's screen title */
+  --text-screen--line-height: 1.1;
+  --text-figure-sm: 19px;
+  --text-figure-sm--line-height: 1.05;
+  --text-figure: 22px;
+  --text-figure--line-height: 1.05;
+  --text-figure-lg: 26px;
+  --text-figure-lg--line-height: 1.02;
+  --text-figure-xl: 30px;
+  --text-figure-xl--line-height: 1;
+  --text-hero: 32px; /* the MRR figure on the indigo card */
+  --text-hero--line-height: 1;
+  --text-hero-lg: 34px;
+  --text-hero-lg--line-height: 1;
+
+  --tracking-chip: 0.07em;
+  --tracking-caps: 0.09em;
+  --tracking-kicker: 0.12em;
+  --tracking-brand: 0.16em;
+  --tracking-figure: -0.02em;
+  --tracking-figure-tight: -0.03em;
+
+  /* ----------------------------------------------------------- shape --- */
+  --radius-chip: 5px;
+  --radius-chip-lg: 6px;
+  --radius-pill: 11px;
+  --radius-pill-lg: 12px;
+  --radius-card: 14px;
+  --radius-card-lg: 18px; /* the four health-strip cards */
+  --radius-hero: 16px; /* the narrow view's hero */
+  --radius-phone: 26px; /* the narrow view's device frame */
+
+  --shadow-card: 0 1px 2px rgba(31, 36, 48, 0.04), 0 6px 18px rgba(31, 36, 48, 0.05);
+  --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.66);
+
+  /* ----------------------------------------------------------- shell --- */
+  --spacing-sidebar: 212px;
+  --spacing-content: 1440px;
+
+  --animate-shimmer: shimmer 1.2s linear infinite;
+  --animate-fadein: fadein 0.12s ease-out;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -320px 0;
+  }
+  100% {
+    background-position: 320px 0;
+  }
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer base {
+  /*
+   * `tabular-nums` on the root, per the spec, and it is load bearing rather
+   * than typographic taste: this console is columns of figures that an operator
+   * compares by eye down a column. Proportional digits make a `1` narrower than
+   * a `7`, so the ones place stops lining up and a 4,182 next to a 11,740 reads
+   * as the wrong magnitude for a moment. One declaration here beats remembering
+   * it on every table.
+   */
+  html {
+    font-variant-numeric: tabular-nums;
+  }
+
+  body {
+    background: var(--color-shell);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-title);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * A visible focus ring everywhere, because this console is driven from the
+   * keyboard — ⌘K, then arrows, then Enter — and an operator who cannot see
+   * where focus is has to reach for the mouse in the middle of an incident.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-primary-tint);
+    color: var(--color-ink);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

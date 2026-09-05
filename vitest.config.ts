@@ -62,6 +62,14 @@ export default defineConfig({
         // database. Their logic is covered; their process wiring is not.
         'packages/persistence/src/db/clear.ts',
         'packages/persistence/src/db/seeds/**',
+        // Console fixtures: test data, on the same argument as the seeds above.
+        // What matters about them is not that every `?? default` in a builder is
+        // exercised, but that the data they produce is internally consistent and
+        // agrees across screens — and that is asserted directly in
+        // apps/ghalla-ops/test/fixtures.test.ts, which runs every derivation in
+        // the directory. Line coverage of a default parameter would add a test
+        // that asserts a fixture's own shape back at itself.
+        'apps/ghalla-ops/src/lib/fixtures/**',
       ],
       /**
        * 99% on all four, and the build fails below it.
