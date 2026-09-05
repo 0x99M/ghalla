@@ -1,5 +1,5 @@
 {
-  "id": "abe82a7a-25c3-4b0b-9143-a6cd726c168b",
+  "id": "a9d0e703-1769-4ff2-bf2d-4cf2e7fb91fa",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1651,13 +1651,13 @@
           "name": "currency",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "business_date": {
           "name": "business_date",
           "type": "date",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "status": {
           "name": "status",
@@ -1959,6 +1959,10 @@
         "order_profit_totals_iff_computed": {
           "name": "order_profit_totals_iff_computed",
           "value": "(\"order_profit\".\"status\" = 'computed') = (\"order_profit\".\"contribution_margin_minor\" IS NOT NULL)"
+        },
+        "order_profit_currency_iff_computed": {
+          "name": "order_profit_currency_iff_computed",
+          "value": "(\"order_profit\".\"status\" = 'computed') = (\"order_profit\".\"currency\" IS NOT NULL AND \"order_profit\".\"business_date\" IS NOT NULL)"
         },
         "order_profit_restock_bounded": {
           "name": "order_profit_restock_bounded",

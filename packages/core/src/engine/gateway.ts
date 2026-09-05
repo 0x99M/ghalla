@@ -61,12 +61,20 @@ function bestRule(
 function schemeCandidates(rules: readonly GatewayFeeRule[], payment: PaymentBreakdown): readonly GatewayFeeRule[] {
   const eligible = rules.filter(
     (r) =>
-      r.instrument === payment.instrument &&
+      // `instrument === null` is a catch-all and must stay eligible. Admitting
+      // only an exact match meant that a merchant whose whole rate card is one
+      // blended row got a gateway fee of ZERO on every wallet order — the fee
+      // does not depend on the scheme there, so it was knowable — and the
+      // resulting `missing` basis then pushed those orders out of loss-maker
+      // ranking entirely. The same order priced correctly the moment the
+      // platform happened to name the scheme.
+      (r.instrument === null || r.instrument === payment.instrument) &&
       (r.provider === null || r.provider === payment.provider),
   );
   if (eligible.length === 0) return [];
   // Degrade from bestRule rather than replacing it: compare only within the most
-  // specific tier that actually applies, so a provider-keyed table still wins.
+  // specific tier that actually applies, so a provider-keyed table still wins
+  // and a catch-all is reached only when nothing more specific exists.
   const top = Math.max(...eligible.map(specificity));
   return eligible.filter((r) => specificity(r) === top);
 }

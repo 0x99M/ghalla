@@ -1,0 +1,27 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "//": [
+    "Railpack decides install/build/start BEFORE this file is applied, so the",
+    "build and start commands are set on the service as RAILPACK_BUILD_CMD and",
+    "RAILPACK_START_CMD rather than here.",
+    "",
+    "This file is the API service's config. When the worker and cron services",
+    "land they get their own, because only the API may run migrations."
+  ],
+  "build": {
+    "builder": "RAILPACK",
+    "//watchPatterns": "Deliberately NOT set here. Config-as-code overrides the service setting, so keeping watch patterns in this file would mean a commit every time auto-deploy is toggled."
+  },
+  "deploy": {
+    "//preDeployCommand": [
+      "Each platform's API service owns the migrations for ITS OWN database. The schema is shared code; the databases are not. The worker and cron services must never run this.",
+      "",
+      "Invoked as a plain node path rather than through `pnpm run migrate:deploy`. Railpack's runtime image is not guaranteed to carry the workspace manifests, and a `pnpm --filter` that matches nothing exits ZERO on some versions — which would skip the migration and let the deploy go green against an unmigrated database. node either runs the file or fails loudly."
+    ],
+    "preDeployCommand": "node packages/persistence/dist/db/migrate.js",
+    "healthcheckPath": "/api/v1/health",
+    "healthcheckTimeout": 180,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 5
+  }
+}

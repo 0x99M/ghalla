@@ -155,6 +155,45 @@ export function computeReversalImpact(
     }
   };
 
+  /**
+   * Spreads a COGS credit by revenue share, then re-spreads whatever a line
+   * cannot absorb across the lines that still have headroom.
+   *
+   * A line can only ever return the cost of the goods on it, so the per-line cap
+   * is right — but discarding the overflow is not: it silently under-credits a
+   * refund by however much the revenue split disagreed with the cost split,
+   * which on a mixed-margin order is most of it.
+   */
+  const spreadCappedByCogs = (
+    total: Minor,
+    into: Map<OrderItemId, number>,
+    costs: ReadonlyMap<OrderItemId, LineCogs>,
+  ): void => {
+    let remaining: number = total;
+    let open = buckets.filter((b) => (costs.get(b.key as OrderItemId)?.cogsMinor ?? 0) > 0);
+
+    while (remaining > 0 && open.length > 0) {
+      const shares = allocateMinor(assertInRange(remaining, 'restock residual'), open);
+      let absorbed = 0;
+      for (const [key, amount] of shares) {
+        const id = key as OrderItemId;
+        const headroom = (costs.get(id)?.cogsMinor ?? 0) - (into.get(id) ?? 0);
+        const take = Math.max(0, Math.min(amount, headroom));
+        if (take === 0) continue;
+        into.set(id, (into.get(id) ?? 0) + take);
+        absorbed += take;
+      }
+      remaining -= absorbed;
+      open = open.filter((b) => {
+        const id = b.key as OrderItemId;
+        return (costs.get(id)?.cogsMinor ?? 0) - (into.get(id) ?? 0) > 0;
+      });
+      // Nothing landed and headroom still exists only if every share rounded to
+      // zero, which cannot repeat once the bucket set shrinks.
+      if (absorbed === 0) break;
+    }
+  };
+
   for (const reversal of reversals) {
     const orderLevel = addMinor(
       reversal.shippingRefundExVatMinor,
@@ -172,7 +211,13 @@ export function computeReversalImpact(
         allocated = true;
       }
 
-      let unmatched = 0;
+      // The reversal's own amount is the figure that ties to the cash; the lines
+      // are the detail. Keeping the smaller of the two lost refunded money
+      // whenever the detail summed low, and kept it whenever the detail summed
+      // high — so the direction of the error was decided by the direction of the
+      // discrepancy. The residual is spread instead, exactly as an unmatched
+      // line is.
+      let unmatched = Math.max(0, reversal.amountExVatMinor - claimed);
       for (const line of reversal.lines) {
         if (!reversedRevenue.has(line.orderItemId)) {
           // Do NOT drop the money. A reversal line pointing at an item we do not
@@ -238,7 +283,12 @@ export function computeReversalImpact(
           Math.floor((fullCogs * reversal.amountExVatMinor) / itemsGross),
           'prorated restock',
         );
-        spread(share, restocked);
+        // Spread by line REVENUE, then let whatever a line cannot absorb fall to
+        // the lines that can. Without the second pass the credit landing on a
+        // high-margin line exceeded that line's own cost, the excess was
+        // discarded at the cap, and a full refund of every item returned only a
+        // fraction of the stock the merchant is demonstrably holding again.
+        spreadCappedByCogs(share, restocked, cogsById);
       }
     }
   }

@@ -23,6 +23,7 @@
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -b tsconfig.json && turbo run typecheck",
     "lint": "eslint . --max-warnings=0",
     "arch": "pnpm run arch:vocab && pnpm run arch:graph && ./scripts/check-calc-version.sh",
@@ -30,18 +31,29 @@
     "arch:vocab": "./scripts/no-platform-vocab.sh",
     "verify": "pnpm run arch:vocab && pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run arch:graph",
     "clean": "turbo run clean && rm -rf node_modules/.cache .turbo",
+    "dev:api": "pnpm --filter @ghalla/salla dev",
+    "start:api": "pnpm --filter @ghalla/salla start",
     "db:generate": "pnpm --filter @ghalla/persistence db:generate",
     "db:migrate": "pnpm --filter @ghalla/persistence db:migrate",
     "db:push": "pnpm --filter @ghalla/persistence db:push",
     "db:studio": "pnpm --filter @ghalla/persistence db:studio",
-    "migrate:deploy": "pnpm --filter @ghalla/persistence migrate:deploy"
+    "db:clear": "pnpm --filter @ghalla/persistence build && node packages/persistence/dist/db/clear.js",
+    "db:seed": "pnpm --filter @ghalla/persistence build && node packages/persistence/dist/db/seeds/demo-store.js",
+    "db:reset": "pnpm run db:clear && pnpm run migrate:deploy && pnpm run db:seed",
+    "migrate:deploy": "pnpm --filter @ghalla/persistence migrate:deploy",
+    "release:check": "./scripts/release.sh check",
+    "release:staging": "./scripts/release.sh all",
+    "verify:staging": "./scripts/release.sh verify",
+    "db:reset:staging": "GHALLA_ALLOW_DESTRUCTIVE=1 pnpm run db:reset"
   },
   "devDependencies": {
     "@ghalla/eslint-config": "workspace:*",
     "@ghalla/tsconfig": "workspace:*",
+    "@vitest/coverage-v8": "5.0.0",
     "dependency-cruiser": "18.2.0",
     "eslint": "10.10.0",
     "turbo": "2.10.12",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "5.0.0"
   }
 }

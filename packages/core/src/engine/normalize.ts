@@ -1,4 +1,4 @@
-import { MAX_MINOR, isInstant } from '@ghalla/contracts';
+import { CURRENCY_CODES, MAX_MINOR, isInstant } from '@ghalla/contracts';
 import type {
   CanonicalOrder,
   CanonicalOrderItem,
@@ -85,6 +85,17 @@ function validateFeeRuleSet(feeRuleSet: FeeRuleSet, fatal: Diagnostic[]): void {
     if (codKeys.has(key)) fatal.push(onOrder('DUPLICATE_RULE_KEY'));
     codKeys.add(key);
   }
+
+  // The same guard, for the same reason. `matchShippingRule` picks the first row
+  // of the highest specificity, so two rows with one key mean the caller's
+  // ORDER BY decides the cost — and shipping carries the dominant Saudi loss
+  // shape, where a return to origin IS two shipping legs and nothing else.
+  const shippingKeys = new Set<string>();
+  for (const rule of feeRuleSet.shippingFallback) {
+    const key = `${rule.countryCode ?? ''}|${rule.region ?? ''}|${rule.carrier ?? ''}|${rule.direction}`;
+    if (shippingKeys.has(key)) fatal.push(onOrder('DUPLICATE_RULE_KEY'));
+    shippingKeys.add(key);
+  }
 }
 
 /**
@@ -123,6 +134,16 @@ export function normalizeAndValidate(input: Readonly<OrderProfitInput>): {
   const reversals = input.reversals ?? [];
   const costs = input.costs ?? [];
 
+  // Three absent currencies are all `undefined` and so compare equal, which let
+  // an input carrying no currency at all through as `computed` with
+  // `currency: undefined` on a field typed CurrencyCode. `Minor` is
+  // currency-free by design, so once such a row is persisted nothing can
+  // recover which unit those halalas were.
+  // Membership, not merely presence: the input is untrusted at runtime whatever
+  // the type says, and an unknown code is as unrecoverable as an absent one.
+  if (!(CURRENCY_CODES as readonly string[]).includes(store.currency)) {
+    fatal.push(onOrder('MALFORMED_INPUT'));
+  }
   if (order.currency !== store.currency) fatal.push(onOrder('CURRENCY_MISMATCH'));
   if (feeRuleSet.currency !== store.currency) fatal.push(onOrder('CURRENCY_MISMATCH'));
 
@@ -149,6 +170,7 @@ export function normalizeAndValidate(input: Readonly<OrderProfitInput>): {
   }
 
   const itemIds = new Set<string>();
+  const lineIds = new Set<string>();
   for (const item of items) {
     if (item.orderId !== order.id) {
       fatal.push(diagnostic('ITEM_ORDER_ID_MISMATCH', { kind: 'line', orderItemId: item.id }));
@@ -159,6 +181,13 @@ export function normalizeAndValidate(input: Readonly<OrderProfitInput>): {
       fatal.push(diagnostic('DUPLICATE_ITEM_ID', { kind: 'line', orderItemId: item.id }));
     }
     itemIds.add(item.id);
+    if (lineIds.has(item.platformLineId)) {
+      // The normalized arrays are sorted by these keys, so a duplicate makes the
+      // sort order depend on arrival order — and every allocation downstream is
+      // built on that order being a function of the content.
+      fatal.push(diagnostic('DUPLICATE_ITEM_ID', { kind: 'line', orderItemId: item.id }));
+    }
+    lineIds.add(item.platformLineId);
 
     if (typeof item.quantity !== 'number' || !Number.isSafeInteger(item.quantity)) {
       fatal.push(diagnostic('NON_INTEGER_QUANTITY', { kind: 'line', orderItemId: item.id }));
@@ -177,13 +206,23 @@ export function normalizeAndValidate(input: Readonly<OrderProfitInput>): {
     }
   }
 
+  const reversalIds = new Set<string>();
   for (const reversal of reversals) {
+    if (reversalIds.has(reversal.id)) {
+      fatal.push(diagnostic('DUPLICATE_ITEM_ID', { kind: 'reversal', reversalId: reversal.id }));
+    }
+    reversalIds.add(reversal.id);
     if (reversal.orderId !== order.id) {
       fatal.push(diagnostic('REVERSAL_ORDER_ID_MISMATCH', { kind: 'reversal', reversalId: reversal.id }));
     }
     for (const line of reversal.lines ?? []) {
-      if (!Number.isSafeInteger(line.quantity) || line.quantity < 0) {
+      // Split, like the order-item path. These codes become Arabic dashboard
+      // copy, and telling a merchant they have "2.5 of a thing" when the value
+      // is -1 sends them looking for a fraction that is not there.
+      if (!Number.isSafeInteger(line.quantity)) {
         fatal.push(diagnostic('NON_INTEGER_QUANTITY', { kind: 'reversal', reversalId: reversal.id }));
+      } else if (line.quantity < 0) {
+        fatal.push(diagnostic('NEGATIVE_QUANTITY', { kind: 'reversal', reversalId: reversal.id }));
       }
       if (!validMinor(line.amountExVatMinor)) {
         fatal.push(diagnostic('NON_INTEGER_MINOR_UNITS', { kind: 'reversal', reversalId: reversal.id }));
@@ -191,7 +230,16 @@ export function normalizeAndValidate(input: Readonly<OrderProfitInput>): {
     }
   }
 
+  const shipmentIds = new Set<string>();
   for (const shipment of shipments) {
+    if (shipmentIds.has(shipment.id)) {
+      // The engine SUMS carrier cost across shipments, so a duplicate is the
+      // webhook-replay shape that double-counts the largest cost line. The
+      // schema has a unique constraint for exactly this; the engine is fed
+      // in-memory objects and needs its own.
+      fatal.push(diagnostic('DUPLICATE_ITEM_ID', { kind: 'shipment', shipmentId: shipment.id }));
+    }
+    shipmentIds.add(shipment.id);
     if (shipment.carrierCostMinor !== null && !validMinor(shipment.carrierCostMinor)) {
       fatal.push(diagnostic('NON_INTEGER_MINOR_UNITS', { kind: 'shipment', shipmentId: shipment.id }));
     }

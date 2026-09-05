@@ -900,13 +900,17 @@ export const orderProfit = pgTable(
     // Which rule set produced the fee numbers, so republishing rates is a
     // targeted recompute rather than a full rebuild.
     feeRuleSetId: text('fee_rule_set_id').references(() => feeRuleSets.id, { onDelete: 'set null' }),
-    currency: text('currency').notNull(),
+    // NULL on a rejected row. The engine rejected before it computed either, and
+    // writing a literal 'SAR' and 1970-01-01 put two false statements in a money
+    // table — every dead-lettered order of an AED store labelled SAR, and every
+    // one of them returned by a date-range query for 1970.
+    currency: text('currency'),
     // STORE-LOCAL. Riyadh is UTC+3 and volume skews to late evening, so UTC
     // bucketing would file every order after 21:00 local under the next day and
     // Ghalla's "yesterday" would disagree with the merchant's own dashboard.
     // Denormalized here so a fact arriving days late invalidates the ORDER's
     // bucket rather than today's.
-    businessDate: date('business_date', { mode: 'string' }).notNull(),
+    businessDate: date('business_date', { mode: 'string' }),
 
     // computed | rejected. A rejected row carries no totals: a margin is
     // structurally unavailable on that branch.
@@ -973,6 +977,11 @@ export const orderProfit = pgTable(
     check(
       'order_profit_totals_iff_computed',
       sql`(${table.status} = 'computed') = (${table.contributionMarginMinor} IS NOT NULL)`,
+    ),
+    // The same rule for the two fields the engine only knows once it computes.
+    check(
+      'order_profit_currency_iff_computed',
+      sql`(${table.status} = 'computed') = (${table.currency} IS NOT NULL AND ${table.businessDate} IS NOT NULL)`,
     ),
     // You cannot get back more goods than you shipped.
     check(

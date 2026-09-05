@@ -23,18 +23,59 @@ export class OrderProfitRepository {
         // A rejected order still needs a row: without one, a dead-lettered order
         // is indistinguishable from an order nobody has computed yet, and the
         // recompute sweep would pick it up forever.
+        //
+        // Every money column is CLEARED, not left behind. An order that computed
+        // once and now rejects would otherwise keep its totals beside
+        // `status: 'rejected'`, which `order_profit_totals_iff_computed` refuses
+        // — so the whole transaction rolled back and the dead-letter was never
+        // recorded at all. The currency and business date go too: the engine
+        // rejected before it knew either.
+        const cleared = {
+          currency: null,
+          businessDate: null,
+          recognitionKind: 'excluded',
+          recognitionReason: null,
+          feeRuleSetId: null,
+          itemsRevenueExVatMinor: null,
+          shippingRevenueExVatMinor: null,
+          codFeeRevenueExVatMinor: null,
+          orderDiscountExVatMinor: null,
+          revenueExVatMinor: null,
+          vatCollectedMinor: null,
+          cogsMinor: null,
+          outboundShippingCostMinor: null,
+          returnShippingCostMinor: null,
+          gatewayFeeExVatMinor: null,
+          gatewayFeeVatMinor: null,
+          gatewayFeeCostMinor: null,
+          codCostExVatMinor: null,
+          codCostVatMinor: null,
+          codCostMinor: null,
+          reversedRevenueExVatMinor: null,
+          restockedCogsMinor: null,
+          reversalImpactMinor: null,
+          contributionMarginMinor: null,
+          marginBps: null,
+          costCoveredRevenueExVatMinor: null,
+          confidence: null,
+        } as const;
+
+        // Whatever bucket the previous computation contributed to has to be
+        // rebuilt without it.
+        const [previous] = await tx
+          .select({ businessDate: orderProfit.businessDate })
+          .from(orderProfit)
+          .where(eq(orderProfit.orderId, result.orderId));
+
         await tx
           .insert(orderProfit)
           .values({
             orderId: result.orderId,
             storeId: result.storeId,
             calcVersion: result.calcVersion,
-            currency: 'SAR',
-            businessDate: '1970-01-01',
             status: 'rejected',
-            recognitionKind: 'excluded',
-            recognitionReason: null,
             diagnostics: result.diagnostics,
+            ...cleared,
           })
           .onConflictDoUpdate({
             target: orderProfit.orderId,
@@ -43,9 +84,21 @@ export class OrderProfitRepository {
               status: 'rejected',
               diagnostics: result.diagnostics,
               computedAt: new Date(),
+              ...cleared,
             },
           });
         await tx.delete(orderProfitLines).where(eq(orderProfitLines.orderId, result.orderId));
+
+        if (previous?.businessDate != null) {
+          const now = new Date();
+          await tx
+            .insert(dailyStoreRollup)
+            .values({ storeId: result.storeId, businessDate: previous.businessDate, dirty: true, dirtiedAt: now })
+            .onConflictDoUpdate({
+              target: [dailyStoreRollup.storeId, dailyStoreRollup.businessDate],
+              set: { dirty: true, dirtiedAt: now },
+            });
+        }
         return;
       }
 
@@ -213,10 +266,13 @@ export class OrderProfitRepository {
    * `feeRuleSetId` on the profit row is for.
    */
   async markDirtyByFeeRuleSet(storeId: StoreId, feeRuleSetId: string): Promise<number> {
-    const dates = await this.db
+    const rows = await this.db
       .selectDistinct({ businessDate: orderProfit.businessDate })
       .from(orderProfit)
       .where(and(eq(orderProfit.storeId, storeId), eq(orderProfit.feeRuleSetId, feeRuleSetId)));
+    // A rejected row has no business date, and nothing it contributed needs
+    // rebuilding — it contributed nothing.
+    const dates = rows.filter((r): r is { businessDate: string } => r.businessDate !== null);
     if (dates.length === 0) return 0;
 
     const now = new Date();

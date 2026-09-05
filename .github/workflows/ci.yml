@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
 
-# The README, the decision record, .dependency-cruiser.mjs and calc-version.ts
+# The README, the decision records, .dependency-cruiser.mjs and calc-version.ts
 # all claim these checks run in CI. This file is what makes that true.
 jobs:
   verify:
@@ -31,6 +31,20 @@ jobs:
       # dependency graph.
       - name: Verify
         run: pnpm run verify
+
+      # A SEPARATE step so the summary says "coverage" rather than "tests" when
+      # this is what failed. The thresholds live in vitest.config.ts and the
+      # command exits non-zero below them, so a release cannot go out under 95%.
+      - name: Unit test coverage (blocks below 95%)
+        run: pnpm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
 
       - name: CALC_VERSION guard
         run: ./scripts/check-calc-version.sh

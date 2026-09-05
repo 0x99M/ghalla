@@ -198,8 +198,8 @@ CREATE TABLE "order_profit" (
 	"store_id" text NOT NULL,
 	"calc_version" integer NOT NULL,
 	"fee_rule_set_id" text,
-	"currency" text NOT NULL,
-	"business_date" date NOT NULL,
+	"currency" text,
+	"business_date" date,
 	"status" text NOT NULL,
 	"recognition_kind" text NOT NULL,
 	"recognition_reason" text,
@@ -230,6 +230,7 @@ CREATE TABLE "order_profit" (
 	CONSTRAINT "order_profit_status_valid" CHECK ("order_profit"."status" IN ('computed', 'rejected')),
 	CONSTRAINT "order_profit_recognition_valid" CHECK ("order_profit"."recognition_kind" IN ('recognized', 'cost_only', 'excluded')),
 	CONSTRAINT "order_profit_totals_iff_computed" CHECK (("order_profit"."status" = 'computed') = ("order_profit"."contribution_margin_minor" IS NOT NULL)),
+	CONSTRAINT "order_profit_currency_iff_computed" CHECK (("order_profit"."status" = 'computed') = ("order_profit"."currency" IS NOT NULL AND "order_profit"."business_date" IS NOT NULL)),
 	CONSTRAINT "order_profit_restock_bounded" CHECK ("order_profit"."restocked_cogs_minor" IS NULL OR "order_profit"."restocked_cogs_minor" <= "order_profit"."cogs_minor")
 );
 --> statement-breakpoint

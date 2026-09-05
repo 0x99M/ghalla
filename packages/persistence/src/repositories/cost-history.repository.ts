@@ -5,12 +5,32 @@ import type { ResolvedCost } from '@ghalla/core';
 import type { Database } from '../db/pool.js';
 import { costHistory } from '../db/schema.js';
 import { minorToNumeric, numericToMinor } from '../db/money.js';
-import { toDateFromInstant, toEnumFromColumn, toIdFromColumn } from '../db/codec.js';
+import { toDateFromInstant, toEnumFromColumn, toIdFromColumn, toInstantFromDate } from '../db/codec.js';
 
 export interface ProductKeyRef {
   readonly platformProductId: string;
   readonly platformVariantId: string | null;
   readonly sku: string | null;
+}
+
+/**
+ * A correction that predates the window it would close.
+ *
+ * Named, because a bare CHECK violation from the driver leaves the caller unable
+ * to tell a merchant's mistake from a database fault — and this one is squarely
+ * a merchant's: realising in July that a cost actually changed in May is an
+ * ordinary thing to realise. Backdating INTO the chain is a real feature and not
+ * a hard one; it is simply not built yet, and saying so beats a SQLSTATE.
+ */
+export class BackdatedCorrectionError extends Error {
+  constructor(readonly openFrom: Instant, readonly attempted: Instant) {
+    super(
+      `Cannot record a cost effective ${attempted} while the open window for that product starts ` +
+        `at ${openFrom}. Close or amend the existing window first; backdating into the middle of ` +
+        `the chain is not supported yet.`,
+    );
+    this.name = 'BackdatedCorrectionError';
+  }
 }
 
 export interface CostEntry {
@@ -110,6 +130,26 @@ export class CostHistoryRepository {
   async record(entry: CostEntry): Promise<void> {
     const from = toDateFromInstant(entry.effectiveFrom);
     await this.db.transaction(async (tx) => {
+      // Checked before the write rather than caught after it: the CHECK would
+      // reject an inverted window with a SQLSTATE that names neither the product
+      // nor the dates.
+      const [open] = await tx
+        .select({ effectiveFrom: costHistory.effectiveFrom })
+        .from(costHistory)
+        .where(
+          and(
+            eq(costHistory.storeId, entry.storeId),
+            eq(costHistory.platformProductId, entry.platformProductId),
+            entry.platformVariantId === null
+              ? isNull(costHistory.platformVariantId)
+              : eq(costHistory.platformVariantId, entry.platformVariantId),
+            isNull(costHistory.effectiveTo),
+          ),
+        );
+      if (open !== undefined && open.effectiveFrom >= from) {
+        throw new BackdatedCorrectionError(toInstantFromDate(open.effectiveFrom), entry.effectiveFrom);
+      }
+
       await tx
         .update(costHistory)
         .set({ effectiveTo: from })

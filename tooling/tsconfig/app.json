@@ -1,12 +1,22 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Ghalla NestJS application",
+  "//": [
+    "ESM, not CommonJS. The reference repo's api is CJS because its packages are too;",
+    "ours are all ESM, and a CJS app importing them pays the interop tax at every",
+    "import for no benefit. One module system across the repo is the cheaper answer.",
+    "",
+    "Three flags are relaxed here and nowhere else, each for NestJS:",
+    "  erasableSyntaxOnly  — decorators and parameter properties are the framework",
+    "  verbatimModuleSyntax — a class imported as a type erases, so design:paramtypes",
+    "                         becomes Object and the injector cannot resolve it. That",
+    "                         failure is a runtime boot error, not a compile error.",
+    "  exactOptionalPropertyTypes — Nest and its ecosystem emit `field?: T`"
+  ],
   "extends": "./base.json",
   "compilerOptions": {
     "lib": ["ES2024"],
     "types": ["node"],
-    "module": "commonjs",
-    "moduleResolution": "node16",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "verbatimModuleSyntax": false,

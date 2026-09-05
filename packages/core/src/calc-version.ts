@@ -24,9 +24,14 @@ import type { CalcVersion } from '@ghalla/contracts';
  * regenerates the fixtures, and the database holds two different calculations
  * under one version with no way to tell them apart.
  */
-export const CALC_VERSION: CalcVersion = toCalcVersion(2);
+export const CALC_VERSION: CalcVersion = toCalcVersion(3);
 
 /*
+ * 3 — a card leg with an unknown scheme now prices from an instrument-agnostic
+ *     catch-all instead of falling to a zero fee; a reversal whose lines sum
+ *     short no longer loses the difference; a prorated restock credit that one
+ *     line cannot absorb is redistributed rather than discarded. Every stored
+ *     row from version 2 must be recomputed.
  * 2 — reversal COGS credit prorated and capped per line; per-line allocation
  *     weighted on item value rather than recognized revenue; freight attributed
  *     per parcel; return shipping attributed to returned lines; recognition
