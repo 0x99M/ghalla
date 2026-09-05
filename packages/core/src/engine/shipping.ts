@@ -158,13 +158,11 @@ export function computeShippingCost(
     parcels.push({ shipmentId: shipment.id, costMinor: rule.costMinor, lineIds });
   }
 
-  const basis: TermBasis = anyMissing
-    ? 'missing'
-    : anyEstimated
-      ? 'estimated'
-      : parcels.length === 0
-        ? 'not_applicable'
-        : 'actual';
+  // Reaching here means at least one leg survived the filter, and every leg
+  // either pushes a parcel or raises one of these flags — so `parcels` is
+  // non-empty whenever both are false. The `not_applicable` case belongs to the
+  // no-legs return above, which is where a pickup order leaves.
+  const basis: TermBasis = anyMissing ? 'missing' : anyEstimated ? 'estimated' : 'actual';
 
   return {
     value: { costMinor: addMinor(...parcels.map((p) => p.costMinor)), basis, parcels },

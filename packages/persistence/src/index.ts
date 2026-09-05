@@ -11,6 +11,15 @@ export type { Database, PoolConfig } from './db/pool.js';
 export { createDb, createPool, resolveSsl } from './db/pool.js';
 export { defaultMigrationsFolder, runMigrations } from './db/migrate.js';
 
+export type { MigrationState } from './db/migration-state.js';
+export {
+  compareMigrations,
+  countAppliedMigrations,
+  extractCount,
+  readJournalTags,
+  readMigrationState,
+} from './db/migration-state.js';
+
 export {
   MONEY_PRECISION,
   MONEY_SCALE,

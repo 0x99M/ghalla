@@ -56,6 +56,18 @@ export function allocateOrderCostsToLines(
    * changes nothing there.
    */
   const weightOf = (id: OrderItemId): Minor => itemById.get(id)?.lineTotalExVatMinor ?? ZERO;
+
+  /**
+   * A share, by line id.
+   *
+   * Every allocation map here comes from `allocateMinor`, which returns an
+   * entry for each bucket, and every bucket comes from `revenue` — so a lookup
+   * by a revenue line's own id always hits. The fallback satisfies the type
+   * system rather than a case, and saying that once beats repeating `?? ZERO`
+   * seven times as if each were a real possibility.
+   */
+  const shareOf = (allocation: ReadonlyMap<string, Minor>, id: OrderItemId): Minor =>
+    allocation.get(id) ?? ZERO;
   const buckets = revenue.map((line) => ({ key: line.orderItemId, weight: weightOf(line.orderItemId) }));
   const spread = (total: Minor): ReadonlyMap<string, Minor> => allocateMinor(total, buckets);
 
@@ -82,7 +94,7 @@ export function allocateOrderCostsToLines(
         inParcel.map((l) => ({ key: l.orderItemId, weight: weightOf(l.orderItemId) })),
       );
       for (const [key, amount] of share) {
-        out.set(key, toMinor((out.get(key) ?? 0) + amount));
+        out.set(key, toMinor(shareOf(out, key as OrderItemId) + amount));
       }
     }
     return out;
@@ -120,12 +132,12 @@ export function allocateOrderCostsToLines(
     const lineCogs = cogsById.get(id);
     const lineReversal = reversalById.get(id);
 
-    const allocatedShippingRevenue = shippingRevenue.get(id) ?? ZERO;
-    const allocatedCodFeeRevenue = codFeeRevenue.get(id) ?? ZERO;
-    const allocatedOutbound = outbound.get(id) ?? ZERO;
-    const allocatedReturn = returned.get(id) ?? ZERO;
-    const allocatedGateway = gateway.get(id) ?? ZERO;
-    const allocatedCod = cod.get(id) ?? ZERO;
+    const allocatedShippingRevenue = shareOf(shippingRevenue, id);
+    const allocatedCodFeeRevenue = shareOf(codFeeRevenue, id);
+    const allocatedOutbound = shareOf(outbound, id);
+    const allocatedReturn = shareOf(returned, id);
+    const allocatedGateway = shareOf(gateway, id);
+    const allocatedCod = shareOf(cod, id);
     const cogsMinor = lineCogs?.cogsMinor ?? ZERO;
     const reversalImpact = lineReversal?.impactMinor ?? ZERO;
 

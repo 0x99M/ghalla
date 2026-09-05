@@ -22,6 +22,10 @@ export RAILWAY_CALLER="skill:use-railway@1.4.0"
 step_check() {
   echo "── check ───────────────────────────────────────────────"
   pnpm run verify || return 1
+  # Not in `verify`: it needs a clean drizzle/ directory to tell drift from work
+  # in progress, which is exactly what you do NOT have while writing a schema
+  # change. A release, by contrast, has a clean tree by definition.
+  ./scripts/check-migrations.sh || return 1
   # The coverage gate is separate from `verify` on purpose: `verify` is what a
   # developer runs constantly, and instrumenting every run to produce a number
   # nobody reads is a tax. A release pays it once.

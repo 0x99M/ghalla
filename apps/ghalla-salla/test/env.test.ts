@@ -21,6 +21,7 @@ describe('loadEnv', () => {
       databaseSslMode: 'require',
       databasePoolMax: 5,
       railwayEnvironment: 'staging',
+      logLevel: undefined,
       gitSha: 'abc1234def',
     });
   });

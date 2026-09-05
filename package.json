@@ -29,6 +29,7 @@
     "arch": "pnpm run arch:vocab && pnpm run arch:graph && ./scripts/check-calc-version.sh",
     "arch:graph": "depcruise --config .dependency-cruiser.mjs packages apps tooling",
     "arch:vocab": "./scripts/no-platform-vocab.sh",
+    "check:migrations": "./scripts/check-migrations.sh",
     "verify": "pnpm run arch:vocab && pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run arch:graph",
     "clean": "turbo run clean && rm -rf node_modules/.cache .turbo",
     "dev:api": "pnpm --filter @ghalla/salla dev",

@@ -159,6 +159,47 @@ describe('a restock credit a line cannot absorb', () => {
   });
 });
 
+describe('a second refund on stock that already came back', () => {
+  it('stops rather than crediting the same goods twice', () => {
+    // A merchant refunds an order in two parts — a partial, then the rest. The
+    // cost of the goods can only come back ONCE, so by the second reversal the
+    // line has no headroom left. The redistribution loop must notice that
+    // nothing landed and stop, instead of spinning on a residue it can never
+    // place.
+    const revenueLines = [revenueLine(1, 40_000)];
+    const cogsLines = [cogsLine(1, 9_000)];
+    const quantities = new Map([[id(1), 1]]);
+    const weights = new Map([[id(1), toMinor(40_000)]]);
+
+    const result = computeReversalImpact(
+      [
+        reversal({
+          id: 'o#rev:1' as CanonicalReversal['id'],
+          amountExVatMinor: toMinor(40_000),
+          totalIncVatMinor: toMinor(40_000),
+        }),
+        reversal({
+          id: 'o#rev:2' as CanonicalReversal['id'],
+          platformReversalId: 'r2',
+          amountExVatMinor: toMinor(40_000),
+          totalIncVatMinor: toMinor(40_000),
+        }),
+      ],
+      revenueLines,
+      cogsLines,
+      quantities,
+      weights,
+      { kind: 'recognized' },
+      [],
+      true,
+    );
+
+    // The whole cost, once — not twice, which would turn a double refund into
+    // a profit.
+    expect(result.value.restockedCogsMinor).toBe(9_000);
+  });
+});
+
 describe('a reversal whose line detail disagrees with its own total', () => {
   it('spreads the shortfall rather than keeping the smaller figure', () => {
     // The reversal's own amount ties to the cash; the lines are the detail.

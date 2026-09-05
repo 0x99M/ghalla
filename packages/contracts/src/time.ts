@@ -48,8 +48,12 @@ function isLeapYear(year: number): boolean {
  * failing, which is exactly the wrong behaviour for a validator.
  */
 function isRealDate(year: number, month: number, day: number): boolean {
-  if (month < 1 || month > 12 || day < 1) return false;
-  const base = DAYS_IN_MONTH[month - 1] ?? 0;
+  if (day < 1) return false;
+  // The lookup IS the range check. Asking `month < 1 || month > 12` first and
+  // then defaulting the subscript anyway asks the same question twice and
+  // leaves the second answer untestable.
+  const base = DAYS_IN_MONTH[month - 1];
+  if (base === undefined) return false;
   const max = month === 2 && isLeapYear(year) ? 29 : base;
   return day <= max;
 }

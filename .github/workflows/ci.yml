@@ -32,10 +32,17 @@ jobs:
       - name: Verify
         run: pnpm run verify
 
+      # The deploy applies migrations on its own, so the failure this catches is
+      # not a forgotten RUN — it is a forgotten GENERATE. That one is silent:
+      # every migration applies cleanly and the service comes up against a
+      # database missing the column the code was just taught to read.
+      - name: Every schema change has a migration
+        run: ./scripts/check-migrations.sh
+
       # A SEPARATE step so the summary says "coverage" rather than "tests" when
       # this is what failed. The thresholds live in vitest.config.ts and the
-      # command exits non-zero below them, so a release cannot go out under 95%.
-      - name: Unit test coverage (blocks below 95%)
+      # command exits non-zero below them, so a release cannot go out under 99%.
+      - name: Unit test coverage (blocks below 99%)
         run: pnpm run test:coverage
 
       - name: Upload coverage report

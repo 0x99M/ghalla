@@ -1,6 +1,6 @@
 # 0005 — Testing and the release pipeline
 
-**Status:** in place. The gate blocks a release below 95% coverage or on any failing test.
+**Status:** in place. The gate blocks a release below 99% coverage or on any failing test.
 **Date:** 2026-09-05
 **Follows:** [0004 — persistence](./0004-persistence.md)
 
@@ -41,13 +41,13 @@ mock a database that PGlite could have run for real.
 
 ## The coverage gate
 
-`vitest.config.ts` sets **95%** on statements, branches, functions and lines, measured across the
+`vitest.config.ts` sets **99%** on statements, branches, functions and lines, measured across the
 whole repository as one number. Per-package thresholds were rejected: they let a thinly-tested
 package hide behind a well-tested one.
 
 ```
 pnpm test           # fast: every suite, no instrumentation
-pnpm test:coverage  # the gate. Exits non-zero below 95% on any metric.
+pnpm test:coverage  # the gate. Exits non-zero below 99% on any metric.
 ```
 
 CI runs the gate as its own step, so a failure says *coverage* rather than *tests*. It cannot be
@@ -175,3 +175,5 @@ different things.
 | A deploy failed | `railway logs --service ghalla-salla-api --lines 200` |
 | Did the migration run on that deploy | `railway logs <deployment-id> -d` — look for `Migrations complete` before `Starting Container` |
 | The engine's arithmetic changed | Bump `CALC_VERSION`; the guard fails the build otherwise |
+| Changed `schema.ts` | `pnpm db:generate`; `pnpm check:migrations` fails the build without one |
+| Is staging's schema current | `GET /api/v1/health` reports `schema` and the applied/expected counts |

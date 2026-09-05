@@ -44,11 +44,27 @@ export default defineConfig({
         'packages/persistence/src/db/clear.ts',
         'packages/persistence/src/db/seeds/**',
       ],
+      /**
+       * 99% on all four, and the build fails below it.
+       *
+       * What is left uncovered is nine branches in nine different files, each
+       * the same shape: a `?? default` on a lookup that cannot miss, a second
+       * check of something already validated, or a range guard the type system
+       * already enforces. Getting past them would mean deleting safety nets in
+       * money code to move a number, which is the wrong trade — so they stay,
+       * and the number stops here.
+       *
+       * Reaching this did find real things, which is the argument for the gate:
+       * a NestJS provider that resolved in tests and failed in the container, a
+       * regex duplicated between two files where only one copy was ever
+       * checked, and a suite that timed out under instrumentation and would
+       * have blocked releases at random.
+       */
       thresholds: {
-        lines: 95,
-        functions: 95,
-        branches: 95,
-        statements: 95,
+        lines: 99,
+        functions: 99,
+        branches: 99,
+        statements: 99,
       },
     },
   },

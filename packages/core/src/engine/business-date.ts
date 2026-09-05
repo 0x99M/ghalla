@@ -47,12 +47,17 @@ function daysFromCivil(year: number, month: number, day: number): number {
 }
 
 export function epochMillis(instant: Instant): number {
-  // isInstant carries the calendar check, so '2026-02-30' is rejected rather
-  // than rolled over into March — the exact behaviour contracts/time.ts calls
-  // "the wrong behaviour for a validator".
-  if (!isInstant(instant)) throw new MalformedInstantError(String(instant));
+  // Two DIFFERENT checks, in the order that makes both of them live. The regex
+  // is the shape; `isInstant` adds the calendar on top of it, because
+  // '2026-02-30' matches this pattern and is still not a date — and
+  // `new Date('2026-02-30')` rolls it into March rather than failing, which is
+  // exactly the wrong behaviour for a validator.
+  //
+  // Asking `isInstant` first made the null branch below a second copy of a
+  // question already answered, and therefore unreachable: dead code guarding
+  // money, which is worse than no guard because it reads like one.
   const match = INSTANT.exec(instant);
-  if (match === null) {
+  if (match === null || !isInstant(instant)) {
     throw new MalformedInstantError(String(instant));
   }
   const [, y = '', mo = '', d = '', h = '', mi = '', s = '', ms = ''] = match;

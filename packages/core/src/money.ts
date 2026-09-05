@@ -172,14 +172,21 @@ export function allocateMinor(
   const negative = total < 0;
   const magnitude = BigInt(negative ? -total : total);
 
+  // Weight carried ALONGSIDE its bucket rather than in a parallel array read
+  // back by index. The index form needed a `?? 0n` for a subscript that cannot
+  // be out of range — an unreachable branch standing exactly where a reader
+  // expects a decision about money.
+  const weighted = buckets.map((bucket) => ({
+    bucket,
+    raw: bucket.weight > 0 ? BigInt(bucket.weight) : 0n,
+  }));
+  const weightSum = weighted.reduce((sum, w) => sum + w.raw, 0n);
   // All-zero weights: no revenue basis, so divide evenly. Weight 1 each.
-  const rawWeights = buckets.map((b) => (b.weight > 0 ? BigInt(b.weight) : 0n));
-  const weightSum = rawWeights.reduce((a, b) => a + b, 0n);
-  const weights = weightSum === 0n ? buckets.map(() => 1n) : rawWeights;
-  const denominator = weightSum === 0n ? BigInt(buckets.length) : weightSum;
+  const even = weightSum === 0n;
+  const denominator = even ? BigInt(buckets.length) : weightSum;
 
-  const rows = buckets.map((bucket, index) => {
-    const weight = weights[index] ?? 0n;
+  const rows = weighted.map(({ bucket, raw }) => {
+    const weight = even ? 1n : raw;
     const numerator = magnitude * weight;
     const base = numerator / denominator;
     return { key: bucket.key, base, remainder: numerator - base * denominator, weight };
@@ -191,7 +198,10 @@ export function allocateMinor(
   const order = [...rows].sort((a, b) => {
     if (a.remainder !== b.remainder) return a.remainder > b.remainder ? -1 : 1;
     if (a.weight !== b.weight) return a.weight > b.weight ? -1 : 1;
-    return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+    // No equal case: duplicate keys are rejected before this runs, so a third
+    // arm here would be unreachable and would imply an ordering question that
+    // cannot arise.
+    return a.key < b.key ? -1 : 1;
   });
 
   const extra = new Map<string, bigint>();

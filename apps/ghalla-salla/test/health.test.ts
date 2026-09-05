@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import path from 'node:path';
 
 // The health module reaches the Postgres driver through `db.module.js`, and
 // asks drizzle for a `SELECT 1`. Neither belongs in a unit test of the check
@@ -11,13 +12,28 @@ vi.mock('drizzle-orm', () => ({
 
 const { HealthService } = await import('../src/health/health.service.js');
 const { HealthController } = await import('../src/health/health.controller.js');
+const { readJournalTags } = await import('@ghalla/persistence');
 
 type Db = ConstructorParameters<typeof HealthService>[0];
 
 const dbThat = (execute: () => Promise<unknown>): Db => ({ execute }) as unknown as Db;
 
-const reachable = (): Db => dbThat(() => Promise.resolve([{ '?column?': 1 }]));
+/**
+ * The service now asks two questions per check: is the database there, and is
+ * it the shape this build expects. `SELECT 1` and the migration count go
+ * through the same `execute`, so a reachable database answers both — the count
+ * it returns is what decides `schema`.
+ */
+const reachable = (applied = 2): Db =>
+  dbThat(() => Promise.resolve({ rows: [{ n: applied }] }));
 const unreachable = (): Db => dbThat(() => Promise.reject(new Error('ECONNREFUSED')));
+
+// The real journal, so `expected` is whatever this build actually ships.
+const MIGRATIONS = path.resolve(import.meta.dirname, '..', '..', '..', 'packages', 'persistence', 'drizzle');
+const EXPECTED = readJournalTags(MIGRATIONS).length;
+
+const service = (db: Db): InstanceType<typeof HealthService> =>
+  new HealthService(db, MIGRATIONS);
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -28,10 +44,12 @@ describe('HealthService', () => {
     // A check that proves only "the process is listening" is worse than none on
     // a platform that routes on it: the deploy goes green and the first real
     // request discovers the database URL is wrong.
-    const report = await new HealthService(reachable()).check({});
+    const report = await service(reachable(EXPECTED)).check({});
     expect(report).toStrictEqual({
       status: 'ok',
       database: 'ok',
+      schema: 'current',
+      migrations: { applied: EXPECTED, expected: EXPECTED },
       environment: undefined,
       commit: undefined,
     });
@@ -40,18 +58,53 @@ describe('HealthService', () => {
   it('reports degraded when the database is unreachable, rather than throwing', async () => {
     // Throwing here would surface as a 500 with a stack trace; the platform and
     // the on-call engineer both want a structured answer.
-    const report = await new HealthService(unreachable()).check({});
+    const report = await service(unreachable()).check({});
     expect(report.status).toBe('degraded');
     expect(report.database).toBe('unreachable');
   });
 
   it('echoes the environment and commit, so two lookalike deploys are tellable apart', async () => {
-    const report = await new HealthService(reachable()).check({
+    const report = await service(reachable(EXPECTED)).check({
       railwayEnvironment: 'staging',
       gitSha: 'deadbee',
     });
     expect(report.environment).toBe('staging');
     expect(report.commit).toBe('deadbee');
+  });
+});
+
+describe('HealthService and the schema it is talking to', () => {
+  it('degrades when the database is behind the migrations this build ships', async () => {
+    // The pre-deploy hook makes this impossible, which is why it is worth
+    // asserting: reaching it means the hook did not run. The process would
+    // otherwise start, answer, and return numbers computed against a schema
+    // missing the columns the code was just taught to read.
+    const report = await service(reachable(EXPECTED - 1)).check({});
+    expect(report.status).toBe('degraded');
+    expect(report.schema).toBe('behind');
+    expect(report.migrations).toStrictEqual({ applied: EXPECTED - 1, expected: EXPECTED });
+  });
+
+  it('degrades when the database is ahead, which is a rollback', async () => {
+    // Distinct from `behind` because the remedy is the opposite: rolling
+    // forward is safe, "fixing" it by migrating is not.
+    const report = await service(reachable(EXPECTED + 1)).check({});
+    expect(report.status).toBe('degraded');
+    expect(report.schema).toBe('ahead');
+  });
+
+  it('does not ask about the schema when the database is unreachable', async () => {
+    // A second failing round trip would only repeat what the first said.
+    const report = await service(unreachable()).check({});
+    expect(report.database).toBe('unreachable');
+    expect(report.schema).toBe('unknown');
+    expect(report.migrations).toStrictEqual({ applied: 0, expected: 0 });
+  });
+
+  it('reports the counts so an operator can see how far behind it is', async () => {
+    const report = await service(reachable(EXPECTED)).check({});
+    expect(report.migrations.expected).toBe(EXPECTED);
+    expect(report.migrations.applied).toBe(EXPECTED);
   });
 });
 
@@ -77,7 +130,7 @@ describe('HealthController', () => {
   it('leaves the status code alone when everything is healthy', async () => {
     withEnv();
     const { res, status } = responseSpy();
-    const controller = new HealthController(new HealthService(reachable()));
+    const controller = new HealthController(service(reachable(EXPECTED)));
     const body = await controller.healthcheck(res);
     expect(body.status).toBe('ok');
     expect(status).not.toHaveBeenCalled();
@@ -88,7 +141,7 @@ describe('HealthController', () => {
     // has to say which one answered.
     withEnv();
     const { res } = responseSpy();
-    const controller = new HealthController(new HealthService(reachable()));
+    const controller = new HealthController(service(reachable(EXPECTED)));
     const body = await controller.healthcheck(res);
     expect(body.environment).toBe('staging');
     expect(body.commit).toBe('c0ffee1');
@@ -99,7 +152,7 @@ describe('HealthController', () => {
     // tells it to route production traffic at a service that cannot answer.
     withEnv();
     const { res, status } = responseSpy();
-    const controller = new HealthController(new HealthService(unreachable()));
+    const controller = new HealthController(service(unreachable()));
     const body = await controller.healthcheck(res);
     expect(body.status).toBe('degraded');
     expect(status).toHaveBeenCalledWith(503);
@@ -113,7 +166,7 @@ describe('HealthController', () => {
     // let a healthcheck throw instead of answering.
     withEnv();
     const controller = new HealthController(
-      new HealthService(dbThat(() => Promise.reject(new Error('nope')))),
+      service(dbThat(() => Promise.reject(new Error('nope')))),
     );
     expect(controller.ping()).toStrictEqual({ pong: true });
   });

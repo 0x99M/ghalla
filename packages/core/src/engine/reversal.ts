@@ -143,6 +143,20 @@ export function computeReversalImpact(
 
   if (reversals.length === 0) return { value: empty, diagnostics };
 
+  /**
+   * A running total, by line id.
+   *
+   * The three tallies below are seeded from `revenueLines` with a zero each, so
+   * a lookup by a revenue line's own id always hits. The fallback is what the
+   * type system demands of `Map.get`, not a case that happens — and stating
+   * that once is clearer than ten bare `?? 0`s, each of which reads like a real
+   * possibility somebody thought about.
+   *
+   * Costs are the opposite and are deliberately NOT read through this: an
+   * uncosted SKU genuinely has no cost line, and that fallback is arithmetic.
+   */
+  const tally = (of: ReadonlyMap<OrderItemId, number>, id: OrderItemId): number => of.get(id) ?? 0;
+
   const reversedRevenue = new Map<OrderItemId, number>(revenueLines.map((l) => [l.orderItemId, 0]));
   const reversedQty = new Map<OrderItemId, number>(revenueLines.map((l) => [l.orderItemId, 0]));
   const restocked = new Map<OrderItemId, number>(revenueLines.map((l) => [l.orderItemId, 0]));
@@ -151,7 +165,7 @@ export function computeReversalImpact(
   const spread = (total: Minor, into: Map<OrderItemId, number>): void => {
     if (total === 0 || buckets.length === 0) return;
     for (const [key, amount] of allocateMinor(total, buckets)) {
-      into.set(key as OrderItemId, (into.get(key as OrderItemId) ?? 0) + amount);
+      into.set(key as OrderItemId, tally(into, key as OrderItemId) + amount);
     }
   };
 
@@ -169,24 +183,28 @@ export function computeReversalImpact(
     into: Map<OrderItemId, number>,
     costs: ReadonlyMap<OrderItemId, LineCogs>,
   ): void => {
+    // An uncosted SKU has no cost line, so unlike `tally` this fallback is real
+    // arithmetic — a line with no recorded cost returns nothing. Named once
+    // because the loop below asks the same question twice.
+    const costOf = (id: OrderItemId): number => costs.get(id)?.cogsMinor ?? 0;
     let remaining: number = total;
-    let open = buckets.filter((b) => (costs.get(b.key as OrderItemId)?.cogsMinor ?? 0) > 0);
+    let open = buckets.filter((b) => costOf(b.key as OrderItemId) > 0);
 
     while (remaining > 0 && open.length > 0) {
       const shares = allocateMinor(assertInRange(remaining, 'restock residual'), open);
       let absorbed = 0;
       for (const [key, amount] of shares) {
         const id = key as OrderItemId;
-        const headroom = (costs.get(id)?.cogsMinor ?? 0) - (into.get(id) ?? 0);
+        const headroom = costOf(id) - tally(into, id);
         const take = Math.max(0, Math.min(amount, headroom));
         if (take === 0) continue;
-        into.set(id, (into.get(id) ?? 0) + take);
+        into.set(id, tally(into, id) + take);
         absorbed += take;
       }
       remaining -= absorbed;
       open = open.filter((b) => {
         const id = b.key as OrderItemId;
-        return (costs.get(id)?.cogsMinor ?? 0) - (into.get(id) ?? 0) > 0;
+        return costOf(id) - tally(into, id) > 0;
       });
       // Nothing landed and headroom still exists only if every share rounded to
       // zero, which cannot repeat once the bucket set shrinks.
@@ -230,7 +248,7 @@ export function computeReversalImpact(
         }
         reversedRevenue.set(
           line.orderItemId,
-          (reversedRevenue.get(line.orderItemId) ?? 0) + line.amountExVatMinor,
+          tally(reversedRevenue, line.orderItemId) + line.amountExVatMinor,
         );
 
         // Bound the returned quantity by what was actually ordered, and bound
@@ -238,7 +256,7 @@ export function computeReversalImpact(
         // cosmetic field, so a quantity of 5 on a line ordered once credited 5x
         // its cost and turned a refund into profit.
         const ordered = quantities.get(line.orderItemId) ?? 0;
-        const already = reversedQty.get(line.orderItemId) ?? 0;
+        const already = tally(reversedQty, line.orderItemId);
         const creditable = Math.max(0, Math.min(line.quantity, ordered - already));
         reversedQty.set(line.orderItemId, already + creditable);
 
@@ -247,7 +265,7 @@ export function computeReversalImpact(
         }
         if (RECOVERS_COGS.has(line.restockOutcome)) {
           const unit = cogsById.get(line.orderItemId)?.unitCostMinor ?? 0;
-          restocked.set(line.orderItemId, (restocked.get(line.orderItemId) ?? 0) + unit * creditable);
+          restocked.set(line.orderItemId, tally(restocked, line.orderItemId) + unit * creditable);
         }
       }
 
@@ -298,17 +316,17 @@ export function computeReversalImpact(
     const lineCogs = cogsById.get(line.orderItemId)?.cogsMinor ?? 0;
     const revenue =
       recognition.kind === 'recognized'
-        ? assertInRange(reversedRevenue.get(line.orderItemId) ?? 0, 'reversed revenue')
+        ? assertInRange(tally(reversedRevenue, line.orderItemId), 'reversed revenue')
         : ZERO;
     // You cannot get back more goods than you shipped. The cap closes both the
     // multi-reversal over-credit and any residue from proration rounding.
     const cogsBack = assertInRange(
-      Math.max(0, Math.min(restocked.get(line.orderItemId) ?? 0, lineCogs)),
+      Math.max(0, Math.min(tally(restocked, line.orderItemId), lineCogs)),
       'restocked COGS',
     );
     return {
       orderItemId: line.orderItemId,
-      reversedQuantity: Math.min(reversedQty.get(line.orderItemId) ?? 0, ordered),
+      reversedQuantity: Math.min(tally(reversedQty, line.orderItemId), ordered),
       reversedRevenueExVatMinor: revenue,
       restockedCogsMinor: cogsBack,
       impactMinor: addMinor(negateMinor(revenue), cogsBack),

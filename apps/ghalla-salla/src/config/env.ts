@@ -19,6 +19,8 @@ export interface Env {
   readonly databaseUrl: string;
   readonly databaseSslMode: string | undefined;
   readonly databasePoolMax: number;
+  /** Validated by the logger rather than here: a typo must not stop the process booting. */
+  readonly logLevel: string | undefined;
   /** Railway sets this. Useful in a log line when two environments look alike. */
   readonly railwayEnvironment: string | undefined;
   readonly gitSha: string | undefined;
@@ -58,6 +60,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     databaseUrl: required(source, 'DATABASE_URL'),
     databaseSslMode: source['PGSSLMODE'],
     databasePoolMax: integer(source, 'DATABASE_POOL_MAX', 10),
+    logLevel: source['LOG_LEVEL'],
     railwayEnvironment: source['RAILWAY_ENVIRONMENT_NAME'],
     gitSha: source['RAILWAY_GIT_COMMIT_SHA'],
   };
