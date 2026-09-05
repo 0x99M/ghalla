@@ -1,4 +1,14 @@
-import type { Bps, CardScheme, CarrierSlug, FeeRuleSetId, Minor, PaymentInstrument, ProviderSlug, ShipmentDirection } from '@ghalla/contracts';
+import type {
+  Bps,
+  CardScheme,
+  CarrierSlug,
+  CurrencyCode,
+  FeeRuleSetId,
+  Minor,
+  PaymentInstrument,
+  ProviderSlug,
+  ShipmentDirection,
+} from '@ghalla/contracts';
 
 /**
  * One shape for every fee-like cost, because they are all the same arithmetic
@@ -7,7 +17,14 @@ import type { Bps, CardScheme, CarrierSlug, FeeRuleSetId, Minor, PaymentInstrume
 export interface FeeFormula {
   readonly percentBps: Bps;
   readonly fixedMinor: Minor;
-  /** Couriers commonly quote a percentage with a floor. */
+  /**
+   * Couriers commonly quote a percentage with a floor.
+   *
+   * `minFeeMinor <= maxFeeMinor` is a caller invariant, enforced where rate
+   * cards are entered rather than here. Transposing the two changes the fee on
+   * every order under that rule, and which of the two equally natural lines an
+   * implementer writes first decides it.
+   */
   readonly minFeeMinor: Minor | null;
   /**
    * Domestic debit is commonly priced as a percentage *capped* per transaction.
@@ -86,6 +103,14 @@ export interface ShippingFallbackRule {
  */
 export interface FeeRuleSet {
   readonly id: FeeRuleSetId;
+  /**
+   * Checked against `StoreProfitConfig.currency`; a mismatch is the existing
+   * fatal `CURRENCY_MISMATCH`. Rate cards are transcribed by hand from a
+   * processor's PDF, and `CURRENCY_CODES` spans both two- and three-decimal
+   * currencies — so the same integer means a 10× different amount, and nothing
+   * in `Minor` (currency-free by design) could ever tell the difference again.
+   */
+  readonly currency: CurrencyCode;
   readonly gateway: readonly GatewayFeeRule[];
   readonly cod: readonly CodFeeRule[];
   readonly shippingFallback: readonly ShippingFallbackRule[];

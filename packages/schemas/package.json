@@ -10,11 +10,14 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -b",
-    "test": "vitest run --passWithNoTests",
-    "clean": "rm -rf dist"
+    "test": "vitest run",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc -p tsconfig.test.json"
   },
   "dependencies": {
     "@ghalla/contracts": "workspace:*",

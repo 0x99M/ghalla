@@ -15,13 +15,14 @@ import {
   SHIPMENT_STATUSES,
 } from '@ghalla/contracts';
 import {
-  BpsSchema,
   CurrencyCodeSchema,
   CustomerRefSchema,
   InstantSchema,
   MinorSchema,
   PlatformIdSchema,
   QuantitySchema,
+  RateBpsSchema,
+  RawLabelSchema,
   SlugSchema,
   idSchema,
 } from './primitives.js';
@@ -43,7 +44,7 @@ export const CanonicalStoreSchema = z.strictObject({
   platformStoreId: z.string().min(1),
   currency: CurrencyCodeSchema,
   timezone: z.string().min(1),
-  vatRateBps: BpsSchema,
+  vatRateBps: RateBpsSchema,
   vatRegistered: z.boolean(),
   installedAt: InstantSchema,
 });
@@ -56,7 +57,7 @@ export const PaymentBreakdownSchema = z
     scheme: z.enum(CARD_SCHEMES).nullable(),
     wallet: SlugSchema.nullable(),
     provider: SlugSchema.nullable(),
-    rawMethodLabel: z.string(),
+    rawMethodLabel: RawLabelSchema,
     state: z.enum(PAYMENT_LEG_STATES),
     amountGrossMinor: MinorSchema,
     transactionRef: z.string().nullable(),
@@ -102,14 +103,14 @@ export const CanonicalOrderSchema = z.strictObject({
   paymentState: z.enum(PAYMENT_STATES),
   fulfillmentState: z.enum(FULFILLMENT_STATES),
   platformStatusId: z.string().nullable(),
-  rawStatusLabel: z.string(),
+  rawStatusLabel: RawLabelSchema,
   isTest: z.boolean(),
 
   fulfillmentMethod: z.enum(FULFILLMENT_METHODS),
   destination: OrderDestinationSchema.nullable(),
 
   currency: CurrencyCodeSchema,
-  vatRateBps: BpsSchema,
+  vatRateBps: RateBpsSchema,
 
   subtotalExVatMinor: MinorSchema,
   vatAmountMinor: MinorSchema,
@@ -160,7 +161,7 @@ export const CanonicalShipmentSchema = z.strictObject({
   direction: z.enum(SHIPMENT_DIRECTIONS),
   status: z.enum(SHIPMENT_STATUSES),
   carrier: SlugSchema,
-  rawCarrierLabel: z.string(),
+  rawCarrierLabel: RawLabelSchema,
   carrierCostMinor: MinorSchema.nullable(),
   lines: z.array(ShipmentLineSchema).readonly(),
   shippedAt: InstantSchema.nullable(),
@@ -214,7 +215,7 @@ export const CanonicalReversalSchema = z
     platformReversalId: z.string().nullable(),
     kind: z.enum(REVERSAL_KINDS),
     reason: z.enum(REVERSAL_REASONS),
-    rawReasonLabel: z.string().nullable(),
+    rawReasonLabel: RawLabelSchema.nullable(),
     occurredAt: InstantSchema,
 
     amountExVatMinor: MinorSchema,

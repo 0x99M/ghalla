@@ -22,6 +22,8 @@ export {
   MinorSchema,
   PlatformIdSchema,
   QuantitySchema,
+  RateBpsSchema,
+  RawLabelSchema,
   SlugSchema,
   idSchema,
 } from './primitives.js';

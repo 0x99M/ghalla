@@ -46,6 +46,21 @@ export const MinorSchema: z.ZodType<Minor, number> = z
 
 export const BpsSchema: z.ZodType<Bps, number> = z.int().refine(isBps).transform(toBps);
 
+/**
+ * A RATE in basis points: 0% to 100%.
+ *
+ * `Bps` itself is deliberately unbounded, because it is a scale rather than a
+ * range — `OrderProfitTotals.marginBps` is legitimately negative and can fall
+ * far below -10 000 on a return to origin. But a VAT rate is not a margin, and
+ * an unbounded one is not harmless: a negative `vatRateBps` makes VAT
+ * extraction return a net larger than the gross, overstating revenue on every
+ * order for that store, forever, from a single bad ingestion.
+ */
+export const RateBpsSchema: z.ZodType<Bps, number> = BpsSchema.refine(
+  (b) => b >= 0 && b <= 10_000,
+  { error: 'A rate in basis points must be between 0 (0%) and 10000 (100%).' },
+);
+
 export const InstantSchema: z.ZodType<Instant, string> = z
   .string()
   .refine(isInstant, { error: 'Expected an ISO-8601 UTC instant: YYYY-MM-DDTHH:mm:ss.sssZ.' })
@@ -76,6 +91,19 @@ export const PlatformIdSchema: z.ZodType<PlatformId, string> = z
 
 /** Adapter-normalized open slug: carrier, payment processor, wallet. */
 export const SlugSchema = z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/);
+
+/**
+ * A platform's verbatim label, kept for triage.
+ *
+ * Capped, because these are the model's only free-text fields and
+ * `AssertNoPii` guards KEYS, not VALUES — it cannot see a customer's name that
+ * a merchant typed into a refund reason. The cap is a backstop, not the
+ * control: adapters must map these from enumerated platform fields and never
+ * pass through customer-entered text. A length limit is deliberately preferred
+ * to a name-or-phone pattern, which would reject legitimate Arabic labels and
+ * fail ingestion for a whole store.
+ */
+export const RawLabelSchema = z.string().max(120);
 
 /** Quantities are counted, never measured, in phase one. */
 export const QuantitySchema = z.int().nonnegative();

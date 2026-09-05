@@ -10,7 +10,7 @@
 
 export type { Brand } from './brand.js';
 
-export type { Minor, Bps, CurrencyCode } from './money.js';
+export type { Minor, Bps, CurrencyCode, MinorExponent } from './money.js';
 export {
   CURRENCY_CODES,
   MAX_MINOR,

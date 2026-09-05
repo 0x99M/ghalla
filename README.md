@@ -16,19 +16,27 @@ handling, payment gateway fees, and returns/RTO.
 Each platform integration deploys as its own service with its own database. They share
 **code**, not infrastructure. The core is a library, not a service.
 
-This is enforced mechanically, at four layers, and it is [verified by planting a deliberate
-violation](./docs/0001-domain-model.md#what-was-verified-not-assumed) rather than assumed:
+This is enforced mechanically, at three layers, and it is [verified by planting deliberate
+violations](./docs/0001-domain-model.md#what-was-verified-not-assumed) rather than assumed:
 
 | Layer | Mechanism | Catches |
 |---|---|---|
-| **L1** | the package.json graph + pnpm isolated linking | an undeclared import — unresolvable at typecheck, test *and* runtime. No `eslint-disable` reaches it |
-| **L2** | `rootDir` + `"lib": ["ES2024"], "types": []` | a relative escape into another package; `fetch`, `process` and `Buffer` do not typecheck in the pure layer |
-| **L4** | ESLint `boundaries` + `no-restricted-imports` + `no-restricted-syntax` | type-only imports, forbidden SDKs, and purity leaks no import rule can see — `new Date`, `Math.random`, `parseFloat` |
-| **L5** | dependency-cruiser | dynamic `import()`, transitive reach, undeclared dependencies |
+| **L1** | the package.json graph + pnpm isolated linking | an undeclared third-party import — unresolvable at typecheck, test *and* runtime. No `eslint-disable` reaches it |
+| **L2** | `rootDir` + `"lib": ["ES2024"], "types": []` | a relative escape into a package that is not a declared project reference; `fetch`, `process` and `Buffer` do not typecheck in the pure layer |
+| **L3** | ESLint `no-restricted-imports` + `no-restricted-syntax` | forbidden SDKs and type-only imports, the relative-path route into a *referenced* package, and purity leaks no import rule can see — `new Date`, `Math.random`, `parseFloat`, `globalThis`, aliasing, dynamic `import()` |
+| **L4** | dependency-cruiser | transitive reach, undeclared dependencies, and the raw payload reaching anything but the adapter boundary |
+
+There were four. `eslint-plugin-boundaries` was the fourth and it was removed, because an
+adversarial review established that it reported nothing at all under its shipped configuration
+while the README credited it — and arming it correctly needed a module resolver plus three
+coordinated option changes to catch only what the other layers already caught. A credited but
+silent enforcement layer is worse than an absent one.
 
 Plus a ten-second grep, because the rule *"platform vocabulary appears nowhere under
 `packages/`"* is about identifiers and strings, not modules — which is why `PlatformId` is an
-opaque brand rather than a union of platform names.
+opaque brand rather than a union of platform names. It matches case-insensitively on
+substrings, not word boundaries: `\b` would miss `sallaOrderId` and `SALLA_ORDER_ID`, which is
+every shape a real violation actually takes.
 
 ## Layout
 
@@ -60,10 +68,16 @@ questions.
 
 ```bash
 pnpm install
-pnpm verify        # typecheck → lint → test → architecture checks
+pnpm verify        # architecture guards → typecheck → lint → test → dependency graph
 ```
 
-Individually: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm arch`.
+Individually: `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm arch`. The same command runs on
+every push and pull request — see [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
+
+The guards run *first*, deliberately: one of them asserts that exactly one `eslint.config.*`
+exists in the worktree. ESLint 10 resolves config by walking up from each linted file, so a
+config dropped inside a package detaches every boundary rule — and `pnpm lint` then exits 0
+with no output while the violations sit on disk.
 
 Requires Node ≥ 22.13 and pnpm 11.25.0 (via corepack). TypeScript is pinned to the **6.x**
 line on purpose: npm's `latest` is the 7.0 native port, which ships no programmatic compiler
@@ -77,4 +91,5 @@ API — `typescript-eslint` peers `<6.1.0`, so TS 7 would silently disarm the bo
 - No live cost joins in profit queries — costs are snapshotted at ingestion, so correcting a
   cost today cannot silently change last quarter's profit.
 - No inline webhook processing.
-- No customer PII in the database — structurally, via a compile-time key deny-list.
+- No customer PII in the database — structurally, via a compile-time key deny-list over all
+  fourteen canonical types.

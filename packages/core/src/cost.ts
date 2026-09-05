@@ -17,6 +17,16 @@ export interface ResolvedCost {
   readonly platformVariantId: string | null;
   /** Secondary resolution key, necessary where order lines carry no variant identity. */
   readonly sku: string | null;
+  /**
+   * The merchant's true NET CASH cost per unit — net of recoverable input VAT
+   * when the store is VAT-registered, gross when it is not. The same convention
+   * `CanonicalShipment.carrierCostMinor` states, and worth restating here
+   * because COGS is the largest cost line in the model and the only one a
+   * merchant types by hand.
+   *
+   * Denominated in `StoreProfitConfig.currency` by construction: cost history
+   * is per-store, and the caller owns that.
+   */
   readonly unitCostMinor: Minor;
   readonly source: CostSource;
   readonly costHistoryId: CostHistoryId;

@@ -1,0 +1,20 @@
+{
+  "//": [
+    "Type-checks the tests, which the build config deliberately excludes from dist.",
+    "This is NOT optional bookkeeping: golden fixtures live under test/, and without",
+    "this config a float assigned to a Minor field in a fixture compiles and passes,",
+    "which would void the branded-money guarantee in exactly the files written to",
+    "prove the arithmetic.",
+    "rootDir is relaxed to the package root ONLY because this config emits nothing."
+  ],
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

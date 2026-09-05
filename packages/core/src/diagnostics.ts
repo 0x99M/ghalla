@@ -19,6 +19,13 @@ export const DIAGNOSTIC_CODES = [
   'FEE_RULE_DEFAULT_USED',
   'UNKNOWN_PAYMENT_INSTRUMENT',
   'CARD_SCHEME_UNKNOWN',
+  /**
+   * Captured legs sum to less than the order total on an order marked paid.
+   * Gateway fees are proportional to the legs an adapter actually mapped, so
+   * under-mapping always flatters margin — the direction that loses a
+   * merchant's trust rather than merely annoying them.
+   */
+  'PAYMENT_LEGS_UNDER_TOTAL',
   'COD_FEE_RULE_MISSING',
   'RESTOCK_UNKNOWN',
   'REVERSAL_LINES_ALLOCATED',
@@ -55,6 +62,14 @@ export interface Diagnostic {
     | { readonly kind: 'order' }
     | { readonly kind: 'line'; readonly orderItemId: OrderItemId }
     | { readonly kind: 'shipment'; readonly shipmentId: ShipmentId }
+    /**
+     * By index, because a payment leg has no platform identity to key on.
+     * Adapters must emit legs in a canonical order — by state, then amount,
+     * then `transactionRef` — so that a merchant-facing "second payment" means
+     * the same leg across re-ingests. Diagnostics are regenerated wholesale
+     * from the same snapshot the totals came from, so a stale pointer cannot
+     * survive a recompute.
+     */
     | { readonly kind: 'payment'; readonly index: number }
     | { readonly kind: 'reversal'; readonly reversalId: ReversalId };
 }

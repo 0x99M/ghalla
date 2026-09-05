@@ -9,6 +9,17 @@ import type { Brand } from './brand.js';
  */
 export type Minor = Brand<number, 'Minor'>;
 
+/**
+ * Minor units per major unit, as a power of ten.
+ *
+ * A named union rather than `number`, so a miscomputed scale is a compile error.
+ * In a module whose entire thesis is that a bare number must not be able to
+ * become money, a bare number must not be able to decide the scale of that
+ * money either: `NaN` here silently produced a 100× understatement, because
+ * `slice(0, NaN)` is `''` and `padEnd(NaN)` is a no-op.
+ */
+export type MinorExponent = 0 | 2 | 3;
+
 /** An integer count of basis points. 1500 = 15%. Never a 0.15 float. */
 export type Bps = Brand<number, 'Bps'>;
 
@@ -18,7 +29,7 @@ export type CurrencyCode = (typeof CURRENCY_CODES)[number];
 /**
  * The ceiling on any `Minor`.
  *
- * Not chosen for magnitude — SAR 9 billion is already absurd for a Salla store.
+ * Not chosen for magnitude — SAR 9 billion is already absurd for any store in scope.
  * It is chosen so that `value * 10_000` (the intermediate in every basis-point
  * multiplication) stays inside `Number.MAX_SAFE_INTEGER`. Above this the
  * arithmetic stops being exact silently, which is the one failure mode integer
@@ -57,7 +68,13 @@ export function toMinor(value: number): Minor {
   if (value > MAX_MINOR || value < -MAX_MINOR) {
     throw new PrecisionError(`Money out of range: ${String(value)} exceeds ±${String(MAX_MINOR)}.`);
   }
-  return value as Minor;
+  // Normalize negative zero. `-0 === 0` is true and `JSON.stringify(-0)` is "0",
+  // so a signed zero round-trips through a golden fixture looking like an
+  // ordinary zero — while `Object.is(-0, 0)` is false, which is what vitest's
+  // toBe and toEqual compare with. The result is a fixture that fails with
+  // nothing visibly wrong in the JSON. `1 / -0` is also -Infinity, so any
+  // break-even guard written as a division rather than a comparison inverts.
+  return (value === 0 ? 0 : value) as Minor;
 }
 
 export function toBps(value: number): Bps {
@@ -67,7 +84,7 @@ export function toBps(value: number): Bps {
   return value as Bps;
 }
 
-const EXPONENTS: Readonly<Record<CurrencyCode, 0 | 2 | 3>> = {
+const EXPONENTS: Readonly<Record<CurrencyCode, MinorExponent>> = {
   SAR: 2,
   AED: 2,
   KWD: 3,
@@ -76,11 +93,21 @@ const EXPONENTS: Readonly<Record<CurrencyCode, 0 | 2 | 3>> = {
 };
 
 /** Minor units per major unit, as a power of ten. */
-export function currencyExponent(currency: CurrencyCode): 0 | 2 | 3 {
+export function currencyExponent(currency: CurrencyCode): MinorExponent {
   return EXPONENTS[currency];
 }
 
 const DECIMAL = /^([+-]?)(\d+)(?:\.(\d*))?$/;
+
+/** The type says 0 | 2 | 3. Adapters may be JavaScript, so check it at runtime too. */
+function assertExponent(exponent: MinorExponent): void {
+  if (exponent !== 0 && exponent !== 2 && exponent !== 3) {
+    throw new PrecisionError(
+      `Minor-unit exponent must be 0, 2 or 3; received ${String(exponent)}. ` +
+        `Pass currencyExponent(currency) rather than a literal.`,
+    );
+  }
+}
 
 /**
  * Adapter boundary: convert a platform's decimal *string* to minor units.
@@ -93,7 +120,8 @@ const DECIMAL = /^([+-]?)(\d+)(?:\.(\d*))?$/;
  * digits beyond it throw, because silently truncating a merchant's money is
  * worse than failing the ingestion job.
  */
-export function toMinorFromDecimal(raw: string, exponent: number): Minor {
+export function toMinorFromDecimal(raw: string, exponent: MinorExponent): Minor {
+  assertExponent(exponent);
   const match = DECIMAL.exec(raw.trim());
   if (match === null) {
     throw new PrecisionError(`Not a decimal number: ${JSON.stringify(raw)}.`);
@@ -125,7 +153,8 @@ export function toMinorFromDecimal(raw: string, exponent: number): Minor {
  * within 1e-6 of a whole minor unit. A residual larger than that means the float
  * never represented the amount exactly, and rounding it would invent money.
  */
-export function toMinorFromFloat(value: number, exponent: number): Minor {
+export function toMinorFromFloat(value: number, exponent: MinorExponent): Minor {
+  assertExponent(exponent);
   if (!Number.isFinite(value)) {
     throw new PrecisionError(`Money must be finite; received ${String(value)}.`);
   }

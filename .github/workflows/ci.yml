@@ -1,0 +1,36 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# The README, the decision record, .dependency-cruiser.mjs and calc-version.ts
+# all claim these checks run in CI. This file is what makes that true.
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # check-calc-version.sh diffs against the merge base.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@11.25.0 --activate
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Runs, in order: the architecture guards that assert the lint config has
+      # not been detached, then typecheck (src AND tests), lint, tests, and the
+      # dependency graph.
+      - name: Verify
+        run: pnpm run verify
+
+      - name: CALC_VERSION guard
+        run: ./scripts/check-calc-version.sh

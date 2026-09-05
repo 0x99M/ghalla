@@ -10,11 +10,14 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -b",
     "test": "vitest run --passWithNoTests",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "typecheck": "tsc -p tsconfig.test.json"
   },
   "//dependencies": "Exactly one. Adding a second is an architecture decision, not a chore.",
   "dependencies": {

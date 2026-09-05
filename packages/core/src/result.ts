@@ -80,6 +80,11 @@ export interface OrderProfitTotals {
    * Ratios do not aggregate. An average of per-order percentages is not the
    * store's percentage unless every rollup remembers to weight it by revenue,
    * and the one that forgets is subtly, unfalsifiably wrong.
+   *
+   * THE DENOMINATOR IS `Σ(lines.netRevenueExVatMinor)`, not `revenueExVatMinor`.
+   * The latter includes shipping and COD-fee revenue, which no cost can ever
+   * cover — dividing by it caps every store below 100% and sends a merchant
+   * with fully costed items hunting for costs that are not missing.
    */
   readonly costCoveredRevenueExVatMinor: Minor;
 }
@@ -93,6 +98,15 @@ export interface OrderProfitTotals {
  * diverge on the first rounding remainder, after which order profit and the sum
  * of its SKU profits stop matching — the single most credibility-destroying bug
  * this product can ship.
+ */
+/**
+ * CONVENTION: `netRevenueExVatMinor` is ITEMS ONLY — the line's own revenue
+ * after its share of order-level item discounts. Shipping and COD-fee revenue
+ * are order-level and reach a line only through `contributionMarginMinor`,
+ * against which the order-level cost allocations are also netted. A line is
+ * therefore not reconstructible from `netRevenueExVatMinor` alone, by design:
+ * the exact Σ(lines) === totals tie is the property that matters, and adding a
+ * per-line residual field would make that tie optional.
  */
 export interface OrderProfitLine {
   readonly orderItemId: OrderItemId;

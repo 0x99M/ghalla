@@ -24,7 +24,7 @@ export type { BundlePart, OrderBundle } from './bundle.js';
 export { BUNDLE_PARTS } from './bundle.js';
 
 export type { AdapterError, AdapterErrorKind } from './errors.js';
-export { isAdapterError } from './errors.js';
+export { ADAPTER_ERROR_KINDS, isAdapterError } from './errors.js';
 
 export type { PlatformAdapter } from './platform-adapter.js';
 

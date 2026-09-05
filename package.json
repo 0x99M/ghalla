@@ -25,10 +25,10 @@
     "test": "turbo run test",
     "typecheck": "tsc -b tsconfig.json && turbo run typecheck",
     "lint": "eslint . --max-warnings=0",
-    "arch": "pnpm run arch:graph && pnpm run arch:vocab",
-    "arch:graph": "depcruise --config .dependency-cruiser.mjs packages tooling",
+    "arch": "pnpm run arch:vocab && pnpm run arch:graph && ./scripts/check-calc-version.sh",
+    "arch:graph": "depcruise --config .dependency-cruiser.mjs packages apps tooling",
     "arch:vocab": "./scripts/no-platform-vocab.sh",
-    "verify": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run arch",
+    "verify": "pnpm run arch:vocab && pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run arch:graph",
     "clean": "turbo run clean && rm -rf node_modules/.cache .turbo"
   },
   "devDependencies": {

@@ -6,6 +6,7 @@ import {
   toMinorFromDecimal,
   toMinorFromFloat,
 } from '../src/money.js';
+import type { MinorExponent } from '../src/money.js';
 
 describe('toMinor', () => {
   it('accepts integers', () => {
@@ -30,7 +31,7 @@ describe('toMinorFromDecimal', () => {
     expect(() => toMinorFromDecimal('1.005', 2)).toThrow(PrecisionError);
   });
 
-  it.each([
+  it.each<[string, MinorExponent, number]>([
     ['1500', 2, 150_000],
     ['10.50', 2, 1_050],
     ['10.5', 2, 1_050],
@@ -66,6 +67,22 @@ describe('toMinorFromFloat', () => {
 
   it('throws on an exact half, which is genuinely ambiguous at an adapter boundary', () => {
     expect(() => toMinorFromFloat(1.5, 0)).toThrow(PrecisionError);
+  });
+
+  it('normalizes negative zero, which a JSON fixture structurally cannot show you', () => {
+    // -0 === 0 is true and JSON.stringify(-0) is "0", but Object.is(-0, 0) is
+    // false — and Object.is is what toBe compares with. A signed zero therefore
+    // fails a fixture assertion with nothing visibly wrong in the JSON on disk.
+    expect(Object.is(toMinorFromDecimal('-0.00', 2), 0)).toBe(true);
+    expect(Object.is(toMinorFromDecimal('-0', 2), 0)).toBe(true);
+    expect(Object.is(toMinorFromFloat(-0, 2), 0)).toBe(true);
+    expect(Object.is(toMinor(-0), 0)).toBe(true);
+  });
+
+  it('rejects an exponent that is not a real currency scale', () => {
+    expect(() => toMinorFromDecimal('10.00', Number.NaN as MinorExponent)).toThrow(PrecisionError);
+    expect(() => toMinorFromDecimal('10.00', 1.5 as MinorExponent)).toThrow(PrecisionError);
+    expect(() => toMinorFromDecimal('10.00', -1 as MinorExponent)).toThrow(PrecisionError);
   });
 
   it('rejects non-finite values', () => {

@@ -15,6 +15,7 @@ export function addMinor(..._values: readonly Minor[]): Minor {
   throw new NotImplementedError('addMinor');
 }
 
+/** Sign flip that normalizes negative zero, so `-0` never enters a result. */
 export function negateMinor(_value: Minor): Minor {
   throw new NotImplementedError('negateMinor');
 }
@@ -35,6 +36,13 @@ export function mulBps(_value: Minor, _bps: Bps): Minor {
   throw new NotImplementedError('mulBps');
 }
 
+/**
+ * `min(max(value, min), max)` — the cap wins when a caller supplies
+ * `min > max`, which is a caller defect rather than a representable state.
+ * Stated because a rate card's floor and cap are transcribed by hand and the
+ * order of the two operations changes the fee on every order under that rule.
+ * `null` on either side means unbounded on that side.
+ */
 export function clampMinor(_value: Minor, _min: Minor | null, _max: Minor | null): Minor {
   throw new NotImplementedError('clampMinor');
 }

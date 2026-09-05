@@ -1,6 +1,5 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import boundaries from 'eslint-plugin-boundaries';
 
 /**
  * Packages that may never appear in the pure layer (contracts / core / ports).
@@ -25,43 +24,81 @@ export const FORBIDDEN_IN_PURE = [
 
 const NODE_BUILTINS = [
   'assert', 'buffer', 'child_process', 'cluster', 'crypto', 'dns', 'events', 'fs',
-  'http', 'http2', 'https', 'net', 'os', 'path', 'process', 'readline', 'stream',
-  'timers', 'tls', 'url', 'util', 'v8', 'vm', 'worker_threads', 'zlib',
+  'http', 'http2', 'https', 'module', 'net', 'os', 'path', 'process', 'readline',
+  'stream', 'timers', 'tls', 'url', 'util', 'v8', 'vm', 'worker_threads', 'zlib',
 ];
 
-const PURE_GLOBS = ['packages/contracts/**/*.ts', 'packages/core/**/*.ts', 'packages/ports/**/*.ts'];
+const TS = '**/*.{ts,mts,cts}';
+const PURE_GLOBS = [
+  'packages/contracts/**/*.{ts,mts,cts}',
+  'packages/core/**/*.{ts,mts,cts}',
+  'packages/ports/**/*.{ts,mts,cts}',
+];
 
-/** Purity leaks that no import rule can see: ambient time, randomness, float math. */
+const NO_IO = 'The pure layer has no I/O. If you need a Node builtin, you are in the wrong package.';
+
+/**
+ * Purity leaks that no import rule can see.
+ *
+ * These are written against MemberExpression rather than CallExpression on
+ * purpose: `const now = Date.now; now()` and `const { round } = Math` are
+ * refactors a reviewer waves through, and a call-shaped selector misses both.
+ */
 const IMPURE_SYNTAX = [
   {
     selector: "NewExpression[callee.name='Date']",
     message: 'core is pure: no ambient clock. Take the instant as an explicit input.',
   },
   {
-    selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+    selector: "MemberExpression[object.name='Date'][property.name='now']",
     message: 'core is pure: no ambient clock. Take the instant as an explicit input.',
   },
   {
-    selector: "CallExpression[callee.object.name='Math'][callee.property.name='random']",
+    selector: "MemberExpression[object.name='Math'][property.name='random']",
     message: 'core is pure: no randomness.',
   },
   {
-    selector: "MemberExpression[object.name='process']",
-    message: 'core is pure: no process, no environment.',
+    selector: "MemberExpression[object.name='Math'][property.name='round']",
+    message:
+      'Math.round is half-UP, not half-away-from-zero: Math.round(-1.5) === -1 leaks a halala on every ' +
+      'reversal. Use the rounding helper in packages/core/src/money.ts.',
+  },
+  {
+    selector: "MemberExpression[property.name='toFixed']",
+    message: 'No floats for money. Format at the presentation edge, never in the engine.',
   },
   {
     selector: "CallExpression[callee.name='parseFloat']",
     message: 'No floats for money. Parse decimal strings digit-wise via toMinorFromDecimal.',
   },
   {
-    selector: "CallExpression[callee.property.name='toFixed']",
-    message: 'No floats for money. Format at the presentation edge, never in the engine.',
+    // Aliasing the namespace defeats every selector above.
+    selector: "VariableDeclarator[init.name=/^(Math|Date)$/]",
+    message: 'Aliasing Math or Date hides the purity rules from the linter. Reference them directly, or not at all.',
   },
   {
-    selector: "CallExpression[callee.object.name='Math'][callee.property.name='round']",
+    selector: "MemberExpression[computed=true][property.value=/^(random|round|now|toFixed)$/]",
+    message: 'A computed member access hides the purity rules from the linter.',
+  },
+  {
+    selector: "MemberExpression[object.name='process']",
+    message: 'core is pure: no process, no environment.',
+  },
+  {
+    // `types: []` does not help here: the cast supplies the types.
+    selector: "Identifier[name='globalThis']",
     message:
-      'Math.round is half-UP, not half-away-from-zero: Math.round(-1.5) === -1 leaks a halala on every ' +
-      'reversal. Use the rounding helper in packages/core/src/money.ts.',
+      'globalThis is the one escape that defeats every other rule here — a single cast reaches process, ' +
+      'fetch and require. The pure layer has no use for it.',
+  },
+  { selector: "Identifier[name='eval']", message: 'The pure layer has no use for eval.' },
+  {
+    // Needs no module resolution, so it survives a broken resolver — and it is
+    // the only lint-side rule that sees a dynamic specifier at all.
+    selector: 'ImportExpression',
+    message:
+      'No dynamic import in the pure layer. A dynamic specifier is invisible to every import rule, so it ' +
+      'is the documented way around them. Use a static import, which the boundary rules can see.',
   },
 ];
 
@@ -74,13 +111,15 @@ const restrictedImports = ({ allowWorkspace, message }) => ({
       group: ['@ghalla/**', ...allowWorkspace.map((p) => `!${p}`)],
       message,
     },
+    { group: ['node:*'], message: NO_IO },
     {
-      group: ['node:*'],
-      message: 'The pure layer has no I/O. If you need a Node builtin, you are in the wrong package.',
-    },
-    {
-      group: ['**/apps/**', '../../apps/**', '../../../apps/**'],
-      message: 'packages/* may never import from apps/*. The dependency arrow points one way.',
+      // The second pattern closes the route `rootDir` cannot: TypeScript redirects a
+      // relative import into a DECLARED project reference, so reaching into
+      // ../../contracts/src never raises TS6059.
+      group: ['**/apps/**', '../../apps/**', '../../../apps/**', '../../*/src/**', '../../../*/src/**'],
+      message:
+        'Reach another package by its package name, never by a relative path. packages/* may never ' +
+        'import from apps/* at all.',
     },
     {
       group: FORBIDDEN_IN_PURE,
@@ -89,22 +128,17 @@ const restrictedImports = ({ allowWorkspace, message }) => ({
         'apps/* and packages/{persistence,ingestion}.',
     },
   ],
-  paths: NODE_BUILTINS.map((name) => ({
-    name,
-    message: 'The pure layer has no I/O. If you need a Node builtin, you are in the wrong package.',
-  })),
+  paths: NODE_BUILTINS.map((name) => ({ name, message: NO_IO })),
 });
 
 export default tseslint.config(
-  {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/coverage/**'],
-  },
+  { ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', '**/coverage/**'] },
 
   js.configs.recommended,
   ...tseslint.configs.recommended,
 
   {
-    files: ['**/*.ts'],
+    files: [TS],
     rules: {
       // A leading underscore marks a parameter kept for signature shape — which is
       // most of packages/core until the engine is implemented.
@@ -115,93 +149,21 @@ export default tseslint.config(
     },
   },
 
-  // ---------------------------------------------------------------- L4a ----
-  // Architectural elements + policies. Sees type-only imports, and gives the
-  // in-editor message that names the rule being broken.
-  {
-    files: ['**/*.ts', '**/*.js'],
-    plugins: { boundaries },
-    settings: {
-      'boundaries/elements': [
-        { type: 'contracts', pattern: 'packages/contracts/**', partialMatch: false },
-        { type: 'ports', pattern: 'packages/ports/**', partialMatch: false },
-        { type: 'core', pattern: 'packages/core/**', partialMatch: false },
-        { type: 'schemas', pattern: 'packages/schemas/**', partialMatch: false },
-        { type: 'persistence', pattern: 'packages/persistence/**', partialMatch: false },
-        { type: 'ingestion', pattern: 'packages/ingestion/**', partialMatch: false },
-        { type: 'app', pattern: 'apps/**', partialMatch: false },
-        { type: 'tooling', pattern: 'tooling/**', partialMatch: false },
-      ],
-      'boundaries/include': ['packages/**/*.ts', 'apps/**/*.ts'],
-      'boundaries/ignore': ['**/*.test.ts', '**/*.spec.ts', '**/test/**'],
-    },
-    rules: {
-      'boundaries/dependencies': [
-        'error',
-        {
-          default: 'disallow',
-          policies: [
-            // contracts is a leaf: it may reach nothing but itself.
-            { from: { element: { type: 'contracts' } }, allow: { to: { element: { type: 'contracts' } } } },
-
-            // ports and core reach contracts and nothing else in the workspace.
-            {
-              from: { element: { types: { anyOf: ['ports', 'core'] } } },
-              allow: { to: { element: { types: { anyOf: ['contracts', 'ports', 'core'] } } } },
-            },
-            { from: { element: { type: 'schemas' } }, allow: { to: { element: { types: { anyOf: ['contracts', 'schemas'] } } } } },
-            {
-              from: { element: { types: { anyOf: ['persistence', 'ingestion'] } } },
-              allow: { to: { element: { types: { anyOf: ['contracts', 'ports', 'core', 'schemas', 'persistence', 'ingestion'] } } } },
-            },
-
-            // Applications may reach anything. They are the only layer that may.
-            {
-              from: { element: { type: 'app' } },
-              allow: {
-                to: {
-                  element: {
-                    types: {
-                      anyOf: ['contracts', 'ports', 'core', 'schemas', 'persistence', 'ingestion', 'app', 'tooling'],
-                    },
-                  },
-                },
-              },
-            },
-
-            // Everything may reach third-party packages by default...
-            { allow: { to: { module: { origin: 'external' } } } },
-
-            // ...and then the hard stops go LAST, because the last match wins.
-            {
-              from: { element: { type: '!app' } },
-              disallow: { to: { element: { type: 'app' } } },
-            },
-            {
-              from: { element: { types: { anyOf: ['contracts', 'core', 'ports'] } } },
-              disallow: { to: { module: { origin: 'builtin' } } },
-            },
-            {
-              from: { element: { types: { anyOf: ['contracts', 'core', 'ports'] } } },
-              disallow: { to: { module: { origin: 'external', source: FORBIDDEN_IN_PURE } } },
-            },
-          ],
-        },
-      ],
-    },
-  },
-
-  // ---------------------------------------------------------------- L4b ----
-  // Needs NO module resolution, so it still holds on a fresh clone before
-  // install, or when a resolver upgrade breaks the layer above.
+  // ------------------------------------------------------------------------
+  // The architectural boundary.
+  //
+  // These rules need NO module resolution, so they still hold on a fresh clone
+  // before install, and they cannot be silently disarmed by a resolver upgrade.
+  // They are one of three layers; the other two are the pnpm dependency graph
+  // (which fails at resolve time and no eslint-disable reaches) and
+  // dependency-cruiser (which sees dynamic imports and transitive reach).
+  // ------------------------------------------------------------------------
   {
     files: PURE_GLOBS,
-    rules: {
-      'no-restricted-syntax': ['error', ...IMPURE_SYNTAX],
-    },
+    rules: { 'no-restricted-syntax': ['error', ...IMPURE_SYNTAX] },
   },
   {
-    files: ['packages/contracts/**/*.ts'],
+    files: ['packages/contracts/**/*.{ts,mts,cts}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -210,10 +172,25 @@ export default tseslint.config(
           message: '@ghalla/contracts is a leaf package. It depends on nothing.',
         }),
       ],
+      'no-restricted-syntax': [
+        'error',
+        ...IMPURE_SYNTAX,
+        {
+          // `| null` is the only optionality in the canonical types. The drift audit
+          // in @ghalla/schemas compares by mutual assignability, and an extra
+          // OPTIONAL property is assignability-neutral in both directions — so a
+          // field added to the interface and forgotten in the schema would compile
+          // clean. Forbidding `?` here is what makes that audit's promise true.
+          selector: 'TSPropertySignature[optional=true]',
+          message:
+            'Absence is `| null`, never `?`. An optional property is invisible to the schema drift audit, ' +
+            'and exactOptionalPropertyTypes does not close that gap.',
+        },
+      ],
     },
   },
   {
-    files: ['packages/core/**/*.ts'],
+    files: ['packages/core/**/*.{ts,mts,cts}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -227,7 +204,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/ports/**/*.ts'],
+    files: ['packages/ports/**/*.{ts,mts,cts}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -240,7 +217,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/schemas/**/*.ts'],
+    files: ['packages/schemas/**/*.{ts,mts,cts}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -251,8 +228,8 @@ export default tseslint.config(
               message: '@ghalla/schemas validates the canonical types. It reaches contracts and zod only.',
             },
             {
-              group: ['**/apps/**', '../../apps/**'],
-              message: 'packages/* may never import from apps/*.',
+              group: ['**/apps/**', '../../apps/**', '../../*/src/**'],
+              message: 'Reach another package by its package name. packages/* may never import from apps/*.',
             },
           ],
         },
@@ -260,9 +237,18 @@ export default tseslint.config(
     },
   },
 
-  // Config files and test files are not architectural elements.
+  // Tests and config files are not architectural elements. Note that the pure
+  // packages type-check their test directories via tsconfig.test.json, so a
+  // float assigned to a money field in a fixture is still a build error.
   {
-    files: ['**/*.test.ts', '**/*.spec.ts', '**/test/**/*.ts', '*.js', '*.mjs', 'tooling/**/*.js'],
+    files: [
+      '**/*.test.{ts,mts,cts}',
+      '**/*.spec.{ts,mts,cts}',
+      '**/test/**/*.{ts,mts,cts}',
+      '*.js',
+      '*.mjs',
+      'tooling/**/*.js',
+    ],
     rules: {
       'no-restricted-imports': 'off',
       'no-restricted-syntax': 'off',

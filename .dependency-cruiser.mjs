@@ -64,8 +64,21 @@ export default {
     },
     {
       name: 'no-orphans',
-      severity: 'warn',
-      from: { orphan: true, pathNot: ['\\.d\\.ts$', '(^|/)\\.[^/]+\\.(js|cjs|mjs|ts)$', '(^|/)tsconfig\\.json$'] },
+      comment:
+        'Error, not warn: depcruise exits 0 on warnings, so a warn-severity rule reads as coverage it ' +
+        'does not provide. packages/contracts/src/ingest.ts is an intentional orphan — it is a published ' +
+        'entry point that nothing inside the repo imports yet, which is the whole point of putting the ' +
+        'raw payload behind its own specifier.',
+      severity: 'error',
+      from: {
+        orphan: true,
+        pathNot: [
+          '\\.d\\.ts$',
+          '(^|/)\\.[^/]+\\.(js|cjs|mjs|ts)$',
+          '(^|/)tsconfig\\.json$',
+          '^packages/contracts/src/ingest\\.ts$',
+        ],
+      },
       to: {},
     },
     {

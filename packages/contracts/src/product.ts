@@ -11,6 +11,12 @@ export interface CanonicalProduct {
    * Cost as the platform reports it — the seed for cost history on day one.
    * Adapters map a platform's `0` to `null`: "free" and "we don't know" must
    * never be the same value, because one of them reports 100% margin.
+   *
+   * Same VAT convention as every other cost in the model: the merchant's true
+   * NET CASH cost — net of recoverable input VAT when the store is
+   * VAT-registered, gross when it is not. Deliberately not named `ExVat`,
+   * because for an unregistered merchant that VAT is a permanent cost that
+   * belongs inside the number.
    */
   readonly platformCostMinor: Minor | null;
   /** Named for its VAT basis: displayed Saudi retail prices are legally VAT-inclusive, so the adapter normalizes. */
@@ -25,6 +31,7 @@ export interface CanonicalVariant {
   readonly platformVariantId: string;
   readonly sku: string | null;
   readonly variantName: string;
+  /** Net cash cost, as on `CanonicalProduct.platformCostMinor`. */
   readonly platformCostMinor: Minor | null;
   readonly listPriceExVatMinor: Minor | null;
   readonly active: boolean;

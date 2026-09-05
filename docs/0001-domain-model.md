@@ -125,15 +125,17 @@ is how a partial bundle is retried.
 ### 7. PII is impossible, not forbidden
 
 `AssertNoPii<T>` is a compile-time deny-list over the *keys* of every canonical type, asserted
-for all thirteen of them in `pii-audit.ts`. A field that cannot be declared cannot be mapped,
+for all fourteen of them in `pii-audit.ts`. A field that cannot be declared cannot be mapped,
 cannot be persisted, and cannot leak. It is why `CanonicalOrderItem` carries `productName`
 rather than `name`.
 
 The raw payload — where the forbidden data actually lives — is not a field on the canonical
-types at all. `Ingested<T>` wraps them and is published only at `@ghalla/contracts/ingest`, a
-specifier that both ESLint and dependency-cruiser forbid `core` and `persistence` from
-importing. `Ingested<T>` is not assignable to `T`, so `{ ...canonical, raw }` cannot
-reconstitute it.
+types at all. `Ingested<T>` wraps them and is published only at `@ghalla/contracts/ingest`: a
+specifier ESLint forbids inside `core`, and a module dependency-cruiser forbids *everywhere*
+outside `ports` and `apps` — including by dynamic import and by relative path, which is why the
+graph check is the load-bearing one here. (`persistence` does not exist yet; its ESLint block
+lands with the package.) `Ingested<T>` is not assignable to `T`, so `{ ...canonical, raw }`
+cannot reconstitute it.
 
 `trackingNumber` is on the deny-list, because a waybill number resolves to a delivery address
 on a carrier's public site. The consequence is deliberate: a future carrier-invoice import must
@@ -220,28 +222,71 @@ None of these block writing the types. All six are product calls, not engineerin
 ## What was verified, not assumed
 
 - **Branding bites.** Assigning `1500` to a `Minor`, or a `StoreId` to an `OrderId`, are
-  compile errors. Confirmed against the real compiler, not asserted.
-- **The boundary holds at four layers.** A file planted in `packages/core` importing a
-  persistence SDK, a Node builtin, `@ghalla/ports`, `@ghalla/contracts/ingest`, and using
-  `new Date`, `Math.random`, `Math.round`, `parseFloat`, `.toFixed` and `process.env`
-  produced **11 ESLint errors**, **5 TypeScript errors**, and **7 dependency-cruiser errors**.
-  It was then deleted.
-- **Two holes were found and closed by doing that.** `@ghalla/*` does not cross a slash, so
-  `@ghalla/contracts/ingest` — the one specifier that must not reach the engine — walked
-  straight through the first version of the rule. And `/dist/` in dependency-cruiser's
-  `exclude` made every cross-package edge invisible, silently disarming the rules that depend
-  on them.
-- **The drift audit works.** It caught a real mistake while being written: `CanonicalStore.platform`
-  is a branded `PlatformId` and the schema had declared a plain string.
-- **The vocabulary guard fires.** A planted `'salla'` string under `packages/` fails CI.
-- **31 primitive tests pass**, including the `1.005` case that defeats `parseFloat` and the
-  full leap-year rule that `new Date()` would silently roll over.
+  compile errors against the real compiler.
+- **The boundary holds.** A file planted in `packages/core` importing a persistence SDK, a Node
+  builtin, `@ghalla/ports`, `@ghalla/contracts/ingest`, and using `new Date`, `Math.random`,
+  `Math.round`, `parseFloat`, `.toFixed` and `process.env` produced **11 ESLint errors**,
+  **5 TypeScript errors** and **7 dependency-cruiser errors**. A second file exercising the
+  subtler routes — `globalThis` casts, `const { round } = Math`, `const now = Date.now`,
+  dynamic `import()`, and a relative path into a referenced package — produced **8 more**.
+- **Four holes were found by doing that, not by reasoning about it.** `@ghalla/*` does not
+  cross a slash, so `@ghalla/contracts/ingest` walked through the first version of the rule.
+  `/dist/` in dependency-cruiser's `exclude` made every cross-package edge invisible, silently
+  disarming the rules that depend on them. `globalThis` and namespace aliasing defeated every
+  purity selector. And `rootDir` does not fire on a relative escape into a *declared project
+  reference*, which is the only escape anyone would actually attempt.
+- **The drift audit works, and its limits are known.** It caught a real mistake while being
+  written: `CanonicalStore.platform` is a branded `PlatformId` and the schema had declared a
+  plain string. It does *not* catch an extra optional property — so `?` is now banned by lint
+  in `packages/contracts`, where `| null` is the only optionality.
+- **The vocabulary guard fires**, including on `sallaOrderId` and `SALLA_ORDER_ID`, which the
+  first word-boundary version silently ignored.
+- **49 tests pass** — 33 on the primitives, including the `1.005` case that defeats
+  `parseFloat`, the negative-zero normalization, and the full leap-year rule that `new Date()`
+  would roll over; 16 on the schemas, covering the cross-field invariants that `z.infer` erases
+  and the drift audit therefore cannot see.
+- **`pnpm verify` runs on every push and pull request.**
 
 One thing learned by building rather than designing: a module-private `unique symbol` brand
 **cannot be named across a package boundary**, so a dependent package that lets a branded type
 be inferred into an exported declaration fails with TS4023. The fix is to annotate that export
 with the named alias rather than to weaken the brand — `@ghalla/schemas` annotates its
 primitive schemas for exactly this reason, and the constraint is documented in `brand.ts`.
+
+## What an adversarial review changed
+
+Six independent lenses reviewed the written code, each finding refuted by a second agent before
+it counted. The model itself survived: all five mandated golden fixtures were built as typed
+values and parsed through the real schemas, the exact `Σ(lines) === totals` tie was attacked as
+unsatisfiable twice and holds both times, `MAX_MINOR` is exactly right, and no money field
+anywhere is a plain `number`. What it found instead:
+
+- **The golden fixtures would have landed in the one directory nothing checked.** `core`,
+  `ports` and `schemas` type-checked only `src/`, so a float assigned to a `Minor` field in a
+  fixture compiled and passed. Every package now has a `tsconfig.test.json`, and the guard
+  script fails if one is missing. It caught a real error in an existing test the moment it was
+  turned on.
+- **Negative zero passed every money constructor.** `-0 === 0` is true and `JSON.stringify(-0)`
+  is `"0"`, so it round-trips through a JSON fixture looking ordinary — while `Object.is(-0, 0)`
+  is false, which is what `toBe` compares with. A fixture would have failed with nothing
+  visibly wrong on disk. `toMinor` now normalizes it.
+- **A platform name was sitting in `packages/contracts`**, in a comment, while the guard that
+  exists to prevent exactly that printed "ok". Both the comment and the guard are fixed.
+- **`eslint-plugin-boundaries` reported nothing**, under any configuration, while two documents
+  credited it as a layer. Removed rather than papered over.
+- **`isAdapterError` narrowed on two of five fields**, so a malformed error satisfied the guard
+  and the compiler then promised `retryAfterMs: number | null` on a property that was
+  `undefined` — turning the idiomatic `if (err.retryAfterMs === null)` false and scheduling an
+  immediate, unbounded retry against a platform already rate-limiting us.
+- **`vatRateBps` accepted a negative rate**, which makes VAT extraction return a net larger than
+  the gross. Bounded — but `Bps` itself deliberately stays unbounded, because `marginBps` is
+  legitimately negative and far below -10 000 on a return to origin.
+- **The two adapter-boundary converters took a bare `number` exponent**, in a module whose whole
+  thesis is that a bare number must not become money. `NaN` produced a silent 100× understatement.
+  Narrowed to `0 | 2 | 3`.
+- **Nine claims in this document and the README were not true of the code.** Every one is now
+  either fixed in code or corrected in prose — including "enforced in CI", which was aspirational
+  until the workflow was added.
 
 ## What comes next, once this is agreed
 

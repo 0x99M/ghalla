@@ -1,7 +1,7 @@
 import type { Assert, AssertNoPii } from './pii.js';
 import type { Attribution, CanonicalOrder, OrderDestination, OrderDiscount } from './order.js';
 import type { CanonicalOrderItem } from './order-item.js';
-import type { CanonicalProduct, CanonicalVariant } from './product.js';
+import type { CanonicalProduct, CanonicalVariant, ProductKey } from './product.js';
 import type { CanonicalReversal, CanonicalReversalLine } from './reversal.js';
 import type { CanonicalShipment, ShipmentLine } from './shipment.js';
 import type { CanonicalStore } from './store.js';
@@ -29,6 +29,7 @@ export type PiiAudit = [
   Assert<AssertNoPii<ShipmentLine>>,
   Assert<AssertNoPii<CanonicalProduct>>,
   Assert<AssertNoPii<CanonicalVariant>>,
+  Assert<AssertNoPii<ProductKey>>,
   Assert<AssertNoPii<CanonicalReversal>>,
   Assert<AssertNoPii<CanonicalReversalLine>>,
 ];
