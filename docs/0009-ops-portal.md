@@ -1,9 +1,14 @@
 # 0009 — Ghalla Ops, the internal operator portal
 
-**Status:** step 1 of the brief is built — the portal schema and its migration,
-the `PlatformRegistry`, and the read-only role with its exact grants. The query
-layer, the routes and the pages are next, and the derived-metric signatures at
-the bottom of this file are what they will be built against.
+**Status:** steps 1–4 are built — the portal schema and its migration, the
+`PlatformRegistry` and the read-only role, authentication, `lib/queries` with
+every derived metric, and the read API routes with unstyled scaffold pages. The
+snapshot job (5), the remaining alert types (6) and admin action proxying (7)
+are next.
+
+One thing is blocked on a decision rather than on work: **the list price of each
+monthly plan.** Until those numbers exist, every subscription reports as
+unpriced and list MRR reads zero — deliberately loud rather than quietly wrong.
 
 A separate Railway service, reading every integration database at once. Each
 integration is its own service with its own Postgres, so a cross-platform
@@ -35,18 +40,60 @@ the portal on the next build.
 The brief specifies GitHub OAuth restricted to one account, or email plus TOTP.
 The instruction that arrived with it says the opposite and is more recent: one
 secret in an environment variable, a single field to enter it, nothing else
-reachable without it. That is what will be built.
+reachable without it.
 
 It has one property worth stating plainly, because it shows up in this
 schema: **there is no identity.** `admin_action_log.actor_session` and
 `alert_ack.actor_session` are named for what they can actually hold — a session
 fingerprint, not a person. With one shared key, "who ran the backfill" is not a
 question the portal can answer, and columns called `actor` would have implied it
-could. Rotation is a redeploy, and revocation is the same act.
+could.
 
 For one operator that is a fair trade. It stops being one the day a second
 person has the key, and the honest signal that the day has come is somebody
 asking who did something.
+
+Five decisions inside it are worth recording:
+
+**The session signing key is derived from the access key.** That makes rotation
+and revocation the same act: change the variable, and every outstanding cookie
+stops verifying at the moment the old key stops being accepted. A separate
+session secret would leave every stolen cookie working until it expired on its
+own.
+
+**32 characters, enforced at startup.** This is the load-bearing control, not
+the rate limiter. No limit turns a feasible brute force into an infeasible one
+or the reverse; length does. A portal holding every merchant's business data
+does not start behind a memorable string, and a failed deploy is the better
+outcome.
+
+**Web Crypto, not `node:crypto`.** The same code runs in middleware, which may
+execute on a runtime where the Node module does not exist. One implementation
+across both beats two that can disagree about whether a token is valid — a
+disagreement whose two failure modes are "locked out" and "let in".
+
+**Two rate-limit tiers.** Per source at five failures, globally at twenty. The
+global one exists because a single shared secret makes the source irrelevant to
+an attacker who can change addresses; it is also the tier that could lock the
+operator out, which is why its block is a minute rather than an hour.
+
+**The middleware strips `x-ops-session` before stamping it.** The verified
+session reaches routes as a request header so nothing verifies twice. Deleting
+it first — unconditionally, on public paths too — is what stops a client sending
+one and choosing what the audit log records.
+
+### Liveness and ingestion health are different endpoints
+
+`/api/live` is what Railway calls, so it cannot require a session — and
+therefore answers with a status word and a timestamp and nothing else. A body
+naming platforms and quoting connection errors would tell an unauthenticated
+caller which integrations exist, which are down, and occasionally part of a
+connection string. The detail an operator wants is in `/api/overview`, behind
+the key.
+
+`/api/health?range=` is the brief's route and a different question: how
+ingestion has been going over a window. Overloading one path with both meanings
+is how a health check ends up either leaking or failing deploys.
 
 ### No Redis
 
@@ -307,11 +354,75 @@ queryPlatforms(registry, async (handle) => …): Promise<FanOut<T>>
 which verifies first, skips what it must not read, runs the rest with
 `allSettled`, and returns `partial` with the names of what is missing.
 
+## What the query layer refuses to do twice
+
+Every rule that also exists on the merchant's side is imported rather than
+rewritten, because the failure mode of a second implementation is two screens
+disagreeing about one number and nobody able to say which is right.
+
+- **Which plan a store is on** — `effectivePlanCode` from `@ghalla/billing`, so
+  an agreed downgrade counts at the tier still being paid for.
+- **Which statuses are revenue** — derived from a new `isBilled` predicate,
+  which sits beside `isPaying` precisely because they are one word apart and
+  differ on trials. `SUBSCRIPTION_STATUSES.filter(isBilled)` builds the SQL
+  list, so adding a status to the domain and forgetting it here is impossible.
+- **Which orders count toward a cap** — `usageWindow`, the same function the
+  merchant's usage banner counts with. The batch form expresses that window as
+  a join because one query per store makes a list page take four seconds, and a
+  test asserts the two agree store by store.
+
+Two of those needed a small change upstream: `effectivePlanCode` and
+`usageWindow` now take a `Pick` of `Subscription` rather than the whole row.
+The portal reads through a role granted per COLUMN and does not hold most of
+them, and widening the signature was cheaper than letting it write its own copy.
+
+## Arithmetic that had to round in the right place
+
+**MRR annualises before it sums.** A monthly plan contributes twelve times its
+price, an annual plan contributes its own, and the division by twelve happens
+ONCE at the end. Dividing per store rounds once per subscription, and a hundred
+annual subscribers then accumulate an error nobody can account for. The same
+argument one level up is why `MrrBreakdown` carries `listArrMinor`: a
+cross-platform total sums ARR and divides once, rather than adding rounded MRRs.
+
+**Coverage never stores a ratio.** Numerator and denominator travel separately
+all the way to the point of display, per store, per platform, and across
+platforms. Same for the webhook success rate. A stored percentage cannot be
+re-weighted when it is combined, and the rollup that forgets to re-weight is
+wrong in a way no test catches.
+
+**A rate over nothing is `null`, not zero and not 100%.** A platform with no
+traffic has not achieved a perfect success rate, and painting one green is how
+a silent integration goes unnoticed for a week. A store with no revenue has not
+got bad coverage, and sorting it as zero puts every quiet store at the top of
+the worst-coverage list.
+
+## Degrading instead of failing
+
+Four places, one principle: an operator in the middle of an incident needs what
+can still be shown, labelled.
+
+| Failure | What happens |
+|---|---|
+| A platform database is down | Its section is missing, `partial` is true, and it is named. Every other platform renders. |
+| A platform's grants are wrong | It is **not queried at all** and appears in the same list — a number from a connection that can also write is not one to publish. |
+| The acknowledgement store is down | Alerts still render, marked `acksUnavailable`, all shown unacknowledged. |
+| The portal's own database is down | `/api/live` returns 503 and the pages that do not need it still serve. |
+
+The exception is configuration: a platform listed with no `DATABASE_URL_*`
+fails at startup. It will never fix itself, and starting anyway would make a
+deploy-time typo look exactly like an outage.
+
 ## Deliberately not built yet
 
-- **No pages beyond a scaffold.** Design is a later brief, and anything invented
-  now would read as a decision while waiting to be deleted.
-- **No admin action proxying.** There is nothing on the other end of it yet.
+- **No styling.** Design is a later brief, and anything invented now would read
+  as a decision while waiting to be deleted. The pages exist to prove the data
+  flows.
+- **No admin action proxying.** There is nothing on the other end of it yet —
+  `ghalla-salla` has no webhook controller, no recompute and no backfill.
+- **No snapshots**, so `/api/revenue` returns `series: null` with the reason
+  beside it rather than an empty chart. MRR over time is a question about the
+  past and integration databases hold only the present.
 - **Route handlers hold no logic** — parse, delegate to `lib/`, respond. That is
-  the rule the coverage exclusion for `src/app/**` depends on. A route that
-  starts making decisions comes back into coverage with it.
+  the rule the coverage exclusions for `src/app/**` and `middleware.ts` depend
+  on. A route that starts making decisions comes back into coverage with it.

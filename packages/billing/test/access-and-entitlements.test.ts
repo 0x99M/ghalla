@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { toInstant } from '@ghalla/contracts';
 import type { Instant, StoreId, SubscriptionStatus } from '@ghalla/contracts';
-import { decideAccess, isPaying, isTrialExpired } from '../src/access.js';
+import { decideAccess, isBilled,
+  isPaying, isTrialExpired } from '../src/access.js';
 import { hasFeature, resolveEntitlements } from '../src/entitlements.js';
 import { FEATURES, PLANS, PLAN_CODES, TRIAL_DAYS, cheapestPlanWith, isPlanCode, planOf } from '../src/plans.js';
 import type { Subscription } from '../src/subscription.js';
@@ -217,5 +218,25 @@ describe('resolving entitlements', () => {
 
   it('answers null when no plan carries a feature', () => {
     expect(cheapestPlanWith('nonexistent' as never)).toBeNull();
+  });
+});
+
+describe('isBilled', () => {
+  it('counts the statuses that owe money', () => {
+    expect(isBilled('active')).toBe(true);
+    expect(isBilled('past_due')).toBe(true);
+  });
+
+  it('EXCLUDES A TRIAL, which is the one difference from isPaying', () => {
+    // A trial has access and owes nothing. Counting it as revenue makes every
+    // free signup look like growth, then makes the number turn down a
+    // fortnight later for no commercial reason.
+    expect(isPaying('trialing')).toBe(true);
+    expect(isBilled('trialing')).toBe(false);
+  });
+
+  it('excludes the ended statuses', () => {
+    expect(isBilled('canceled')).toBe(false);
+    expect(isBilled('expired')).toBe(false);
   });
 });

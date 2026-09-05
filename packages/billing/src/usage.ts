@@ -21,6 +21,9 @@ export interface UsageWindow {
   readonly to: Instant;
 }
 
+/** The two fields a usage window is made of. See `PlanState` for why this is a `Pick`. */
+export type BillingPeriod = Pick<Subscription, 'currentPeriodStart' | 'currentPeriodEnd'>;
+
 /**
  * Half-open, and that is the whole reason this type exists rather than passing
  * two dates around. An order placed on the final millisecond of a period
@@ -29,7 +32,7 @@ export interface UsageWindow {
  * once against a cap the merchant has already paid for and once against the one
  * they just renewed.
  */
-export function usageWindow(subscription: Subscription): UsageWindow {
+export function usageWindow(subscription: BillingPeriod): UsageWindow {
   return { from: subscription.currentPeriodStart, to: subscription.currentPeriodEnd };
 }
 

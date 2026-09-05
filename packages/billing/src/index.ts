@@ -31,6 +31,7 @@ export {
 
 export type {
   ApplyOutcome,
+  PlanState,
   ReconcileOutcome,
   Subscription,
   SubscriptionChange,
@@ -45,10 +46,13 @@ export {
 } from './subscription.js';
 
 export type { AccessDecision, AccessNotice, DashboardAccess, PipelineAccess } from './access.js';
-export { decideAccess, isPaying, isTrialExpired } from './access.js';
+export { decideAccess, isBilled, isPaying, isTrialExpired } from './access.js';
 
 export type { Entitlements } from './entitlements.js';
 export { hasFeature, resolveEntitlements } from './entitlements.js';
 
-export type { CacheEntry, UsageStatus, UsageWindow } from './usage.js';
+export type { ListPrices } from './pricing.js';
+export { LIST_PRICES, annualisedListPrice, toMonthlyRate } from './pricing.js';
+
+export type { BillingPeriod, CacheEntry, UsageStatus, UsageWindow } from './usage.js';
 export { UsageCache, usageCacheKey, usageStatus, usageWindow } from './usage.js';

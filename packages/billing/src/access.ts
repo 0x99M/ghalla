@@ -72,6 +72,27 @@ export function isPaying(status: SubscriptionStatus): boolean {
 }
 
 /**
+ * Whether this subscription is BILLED, which is a different question.
+ *
+ * `isPaying` asks whether the merchant has access, and a trial does. Revenue
+ * asks whether money is expected, and a trial is not — counting trials would
+ * make every free signup look like growth and make the number turn down a
+ * fortnight later for no commercial reason.
+ *
+ * `past_due` is counted, because the subscription still exists and the
+ * merchant still owes for the period. Whether the card eventually clears is a
+ * collections question, and dropping the amount on the first failed attempt
+ * would make the figure swing on retry timing.
+ *
+ * Kept beside `isPaying` deliberately: the two are one word apart and easy to
+ * confuse, and having both in the same file is what makes the difference
+ * visible to whoever picks one.
+ */
+export function isBilled(status: SubscriptionStatus): boolean {
+  return status === 'active' || status === 'past_due';
+}
+
+/**
  * The one place any of this is decided.
  *
  * Everything else — the guard, the ingestion worker, the dashboard — reads this

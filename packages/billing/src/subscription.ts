@@ -222,7 +222,17 @@ export function applyChange(current: Subscription, change: SubscriptionChange): 
  * The row catches up on its own: the renewal webhook carries the new plan, and
  * the reconciler writes it down if that webhook never arrives.
  */
-export function effectivePlanCode(subscription: Subscription, now: Instant): string {
+/**
+ * The three fields a pending plan change is decided from.
+ *
+ * Named as its own type so a caller that has projected a few columns out of the
+ * row — the operator portal reads through a role granted per COLUMN, and does
+ * not hold most of them — can still use the canonical definition instead of
+ * writing a second one. A full `Subscription` satisfies it.
+ */
+export type PlanState = Pick<Subscription, 'planCode' | 'pendingPlanCode' | 'pendingPlanEffectiveAt'>;
+
+export function effectivePlanCode(subscription: PlanState, now: Instant): string {
   if (subscription.pendingPlanCode === null || subscription.pendingPlanEffectiveAt === null) {
     return subscription.planCode;
   }

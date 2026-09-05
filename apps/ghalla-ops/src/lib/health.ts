@@ -33,6 +33,41 @@ export interface HealthReport {
   readonly checkedAt: string;
 }
 
+/**
+ * The unauthenticated answer, and the reason it is this thin.
+ *
+ * Anyone on the internet can call `/api/live`. A body naming the platforms and
+ * quoting their connection errors would tell an unauthenticated caller which
+ * integrations exist, which are down, and occasionally the shape of a
+ * connection string. So the body is a word and a timestamp, and the detail goes
+ * to the log — where the operator can already read it — and to the overview,
+ * which is behind the key.
+ */
+export interface Liveness {
+  readonly status: 'ok' | 'error';
+  readonly checkedAt: string;
+}
+
+export async function liveness(
+  ping: () => Promise<void>,
+  options: { readonly now?: (() => string) | undefined; readonly log?: ((message: string) => void) | undefined } = {},
+): Promise<Liveness> {
+  const now = options.now ?? ((): string => new Date().toISOString());
+  const log = options.log ?? ((message: string): void => {
+    console.error(message);
+  });
+
+  try {
+    await ping();
+    return { status: 'ok', checkedAt: now() };
+  } catch (error) {
+    // Logged rather than returned. The operator needs the cause; the caller
+    // does not get to have it.
+    log(`liveness: portal database unreachable: ${describeError(error)}`);
+    return { status: 'error', checkedAt: now() };
+  }
+}
+
 export interface HealthDeps {
   readonly registry: PlatformRegistry;
   readonly pingPortal: () => Promise<void>;

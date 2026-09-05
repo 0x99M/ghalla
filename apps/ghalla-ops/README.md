@@ -61,6 +61,12 @@ table added later is invisible until somebody decides it may be seen.
 ## Environment
 
 ```bash
+# The one secret. Nothing is reachable without it. At least 32 characters or the
+# portal refuses to start — generate with `openssl rand -base64 32`.
+# Rotating it invalidates every open session at the same moment it stops
+# accepting the old key, because the session signing key is derived from it.
+OPS_ACCESS_KEY=…
+
 # The portal's own database. Never DATABASE_URL: this service holds a connection
 # string for every integration at once, and the generic name is the one most
 # likely to be pasted with the wrong value.
@@ -78,6 +84,47 @@ deploy-time typo which will never fix itself, and starting anyway would make it
 look exactly like an outage. A platform that is configured and *down* is the
 opposite case and is handled the opposite way: the portal serves, and every
 response says which platform is missing.
+
+## Auth
+
+One operator, one key, and no identity.
+
+- A single field posts the key to `/api/auth/login`, which compares it in
+  constant time and sets an HTTP-only `SameSite=Lax` cookie signed with a key
+  **derived from `OPS_ACCESS_KEY`** — so rotating the variable revokes every
+  open session.
+- Middleware protects **everything** including `/api`. Three paths are open:
+  `/login`, `/api/auth/login`, and `/api/live` (Railway's health check, which
+  answers with a status word and a timestamp and nothing else).
+- Sessions are 8 hours, absolute, never extended.
+- Failed logins are limited per source (5 in 15 minutes) and globally (20),
+  each with a one-minute block. The global tier exists because one shared
+  secret makes the source irrelevant to an attacker who can change addresses.
+- The middleware **strips any client-supplied `x-ops-session` header** before
+  stamping the verified one. Without that, a caller could choose what the audit
+  log attributes an action to.
+
+There is no identity, and the schema says so: `actor_session`, not `actor`. Two
+operators sharing the key are distinguishable by session and by nothing else,
+which is exactly as much as is true.
+
+## API
+
+| | |
+|---|---|
+| `GET /api/live` | Liveness. **Unauthenticated**, minimal body. |
+| `GET /api/overview` | Everything, merged. Cached 60s; `?refresh` busts it. |
+| `GET /api/stores` | `platform`, `status`, `plan`, `needsAttention`, `sort`, `cursor`, `limit`. |
+| `GET /api/stores/{platform}/{storeId}` | One store. Never cached. |
+| `GET /api/health?range=` | Ingestion health over a window. |
+| `GET /api/revenue?range=` | List MRR. `series` is null until the snapshot job. |
+| `GET /api/alerts` | Computed on read, with acknowledgements applied. |
+| `POST /api/alerts/{key}/ack` | Acknowledge, for 24 hours. |
+| `GET /api/queues/unknown-payment-methods` | Rails an adapter could not map. |
+
+Every aggregate carries `partial` and the platforms it could not read. Route
+handlers hold no logic — parse, delegate to `lib/`, respond — which is the rule
+the coverage exclusion for `src/app/**` depends on.
 
 ## Commands
 

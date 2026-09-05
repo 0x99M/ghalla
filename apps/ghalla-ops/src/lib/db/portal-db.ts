@@ -1,8 +1,7 @@
-import process from 'node:process';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
 import { createPool } from '@ghalla/persistence/pool';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import { loadPortalConfig } from '../platforms/config';
 import * as portalSchema from './portal-schema';
 
@@ -14,7 +13,14 @@ import * as portalSchema from './portal-schema';
  * pool per edit.
  */
 
-export type PortalDatabase = NodePgDatabase<typeof portalSchema>;
+/**
+ * The driver-agnostic handle, not `NodePgDatabase`, for the same reason
+ * `@ghalla/persistence` widens its own: production runs on `pg` and the tests
+ * run the SAME migrations and the SAME writes against PGlite. Pinning the
+ * concrete driver would make those tests impossible to type-check, which is how
+ * a suite ends up asserting against a mock instead of a database.
+ */
+export type PortalDatabase = PgDatabase<PgQueryResultHKT, typeof portalSchema>;
 
 const PORTAL_DB_KEY = Symbol.for('ghalla.ops.portalDb');
 

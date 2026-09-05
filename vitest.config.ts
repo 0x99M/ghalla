@@ -45,6 +45,11 @@ export default defineConfig({
         // testing lives under lib/ and is tested there. A route that starts
         // making decisions has to come back into coverage with it.
         'apps/ghalla-ops/src/app/**',
+        // The same rule one level up: `middleware.ts` is a Next entry point and
+        // holds no decisions. Everything it decides — including the header
+        // stripping that stops a client forging the audit trail — lives in
+        // lib/auth/gate.ts and is tested there.
+        'apps/ghalla-ops/src/middleware.ts',
         // Pool construction and a driver handle. The behaviour worth testing —
         // what a connection probe MEANS — is `evaluateProbe`, which is pure.
         'apps/ghalla-ops/src/lib/db/portal-db.ts',

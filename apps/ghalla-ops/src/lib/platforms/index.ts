@@ -1,4 +1,3 @@
-import process from 'node:process';
 import { loadPlatformConfigs } from './config';
 import { createPlatformRegistry } from './registry';
 import { createPostgresConnection } from './postgres-connection';
