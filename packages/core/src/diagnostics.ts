@@ -41,6 +41,15 @@ export const DIAGNOSTIC_CODES = [
   'REVERSAL_ORDER_ID_MISMATCH',
   'NON_INTEGER_MINOR_UNITS',
   'NEGATIVE_QUANTITY',
+  /** The store's IANA zone is not one this runtime knows, so no business date exists. */
+  'INVALID_TIMEZONE',
+  /**
+   * A bug in the engine, not in the data. `computeOrderProfit` is total, so an
+   * internal invariant that fails surfaces here rather than as a thrown
+   * exception — which in a queue worker would be indistinguishable from a
+   * transient failure and retried forever.
+   */
+  'INTERNAL_INVARIANT_VIOLATED',
   /** Two cost rows for one product key: the as-of query returned overlapping validity windows. */
   'DUPLICATE_COST_KEY',
 ] as const;

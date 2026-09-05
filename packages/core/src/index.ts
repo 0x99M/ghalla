@@ -5,9 +5,6 @@
  * `"lib": ["ES2024"], "types": []`, so `fetch`, `process` and `Buffer` do not
  * typecheck here, and it declares exactly one dependency. Adding a second is an
  * architecture decision, not a chore.
- *
- * STATUS: the type surface is complete and the arithmetic is not. Every function
- * body throws `NotImplementedError` pending sign-off on the domain model.
  */
 
 export { CALC_VERSION } from './calc-version.js';
@@ -41,13 +38,16 @@ export type { OrderProfitInput } from './input.js';
 export type { ComputeOrderProfit } from './compute-order-profit.js';
 export { computeOrderProfit } from './compute-order-profit.js';
 
+export type { AllocationBucket } from './money.js';
 export {
+  MoneyKernelError,
   addMinor,
   allocateMinor,
   clampMinor,
   mulBps,
   negateMinor,
   splitVatInclusive,
+  subMinor,
 } from './money.js';
 
-export { NotImplementedError } from './not-implemented.js';
+export { businessDateOf } from './engine/business-date.js';

@@ -1,0 +1,115 @@
+{
+  "status": "computed",
+  "orderId": "demo:1:1001",
+  "storeId": "demo:1",
+  "currency": "SAR",
+  "businessDate": "2026-03-01",
+  "calcVersion": 1,
+  "feeRuleSetId": "frs_2026_01",
+  "recognition": {
+    "kind": "recognized"
+  },
+  "totals": {
+    "itemsRevenueExVatMinor": 40000,
+    "shippingRevenueExVatMinor": 1500,
+    "codFeeRevenueExVatMinor": 0,
+    "orderDiscountExVatMinor": 0,
+    "revenueExVatMinor": 41500,
+    "vatCollectedMinor": 6225,
+    "cogsMinor": 0,
+    "outboundShippingCostMinor": 2000,
+    "returnShippingCostMinor": 0,
+    "gatewayFeeExVatMinor": 477,
+    "gatewayFeeVatMinor": 72,
+    "gatewayFeeCostMinor": 477,
+    "codCostExVatMinor": 0,
+    "codCostVatMinor": 0,
+    "codCostMinor": 0,
+    "reversedRevenueExVatMinor": 0,
+    "restockedCogsMinor": 0,
+    "reversalImpactMinor": 0,
+    "contributionMarginMinor": 39023,
+    "marginBps": 9403,
+    "costCoveredRevenueExVatMinor": 0
+  },
+  "lines": [
+    {
+      "orderItemId": "demo:1:1001#L1",
+      "platformProductId": "P1",
+      "platformVariantId": null,
+      "sku": "SKU-1",
+      "quantity": 1,
+      "allocatedOrderDiscountExVatMinor": 0,
+      "netRevenueExVatMinor": 25000,
+      "allocatedShippingRevenueExVatMinor": 938,
+      "allocatedCodFeeRevenueExVatMinor": 0,
+      "unitCostMinor": 0,
+      "cogsMinor": 0,
+      "costSource": "none",
+      "costHistoryId": null,
+      "allocatedOutboundShippingMinor": 1250,
+      "allocatedReturnShippingMinor": 0,
+      "allocatedGatewayFeeMinor": 298,
+      "allocatedCodCostMinor": 0,
+      "reversedQuantity": 0,
+      "reversedRevenueExVatMinor": 0,
+      "restockedCogsMinor": 0,
+      "reversalImpactMinor": 0,
+      "contributionMarginMinor": 24390,
+      "costCoveredRevenueExVatMinor": 0
+    },
+    {
+      "orderItemId": "demo:1:1001#L2",
+      "platformProductId": "P2",
+      "platformVariantId": null,
+      "sku": "SKU-2",
+      "quantity": 1,
+      "allocatedOrderDiscountExVatMinor": 0,
+      "netRevenueExVatMinor": 15000,
+      "allocatedShippingRevenueExVatMinor": 562,
+      "allocatedCodFeeRevenueExVatMinor": 0,
+      "unitCostMinor": 0,
+      "cogsMinor": 0,
+      "costSource": "none",
+      "costHistoryId": null,
+      "allocatedOutboundShippingMinor": 750,
+      "allocatedReturnShippingMinor": 0,
+      "allocatedGatewayFeeMinor": 179,
+      "allocatedCodCostMinor": 0,
+      "reversedQuantity": 0,
+      "reversedRevenueExVatMinor": 0,
+      "restockedCogsMinor": 0,
+      "reversalImpactMinor": 0,
+      "contributionMarginMinor": 14633,
+      "costCoveredRevenueExVatMinor": 0
+    }
+  ],
+  "confidence": {
+    "revenue": "reported",
+    "cogs": "missing",
+    "outboundShipping": "actual",
+    "returnShipping": "not_applicable",
+    "gatewayFee": "estimated",
+    "codCost": "not_applicable",
+    "reversal": "not_applicable",
+    "level": "incomplete"
+  },
+  "diagnostics": [
+    {
+      "code": "COST_MISSING",
+      "severity": "warning",
+      "subject": {
+        "kind": "line",
+        "orderItemId": "demo:1:1001#L1"
+      }
+    },
+    {
+      "code": "COST_MISSING",
+      "severity": "warning",
+      "subject": {
+        "kind": "line",
+        "orderItemId": "demo:1:1001#L2"
+      }
+    }
+  ]
+}

@@ -20,7 +20,11 @@ if [ -z "$base" ]; then
 fi
 
 changed=$(git diff --name-only "$base"...HEAD 2>/dev/null || true)
-fixtures=$(printf '%s\n' "$changed" | grep -E '^packages/core/test/fixtures/golden/.*expected\.json$' || true)
+# --diff-filter=M: only MODIFIED expectations count. Adding a new fixture does
+# not change the arithmetic for any row already in the database; changing an
+# existing expectation is precisely the thing that does.
+modified=$(git diff --diff-filter=M --name-only "$base"...HEAD 2>/dev/null || true)
+fixtures=$(printf '%s\n' "$modified" | grep -E '^packages/core/test/fixtures/golden/.*expected\.json$' || true)
 
 if [ -z "$fixtures" ]; then
   echo "ok: no golden fixture expectations changed"

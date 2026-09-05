@@ -5,6 +5,12 @@
     "this config a float assigned to a Minor field in a fixture compiles and passes,",
     "which would void the branded-money guarantee in exactly the files written to",
     "prove the arithmetic.",
+    "",
+    "`types: [node]` appears HERE and never in tsconfig.json. The fixture harness has",
+    "to read files off disk; the engine must not be able to. tsconfig.json keeps",
+    "types: [] and is the config `pnpm build` runs, so `process` in src/ is still a",
+    "build error — this file only relaxes it for the pass that checks test/.",
+    "",
     "rootDir is relaxed to the package root ONLY because this config emits nothing."
   ],
   "extends": "./tsconfig.json",
@@ -14,7 +20,8 @@
     "declarationMap": false,
     "sourceMap": false,
     "noEmit": true,
-    "rootDir": "."
+    "rootDir": ".",
+    "types": ["node"]
   },
   "include": ["src/**/*.ts", "test/**/*.ts"]
 }

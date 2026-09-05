@@ -100,13 +100,25 @@ export interface OrderProfitTotals {
  * this product can ship.
  */
 /**
- * CONVENTION: `netRevenueExVatMinor` is ITEMS ONLY — the line's own revenue
- * after its share of order-level item discounts. Shipping and COD-fee revenue
- * are order-level and reach a line only through `contributionMarginMinor`,
- * against which the order-level cost allocations are also netted. A line is
- * therefore not reconstructible from `netRevenueExVatMinor` alone, by design:
- * the exact Σ(lines) === totals tie is the property that matters, and adding a
- * per-line residual field would make that tie optional.
+ * A line carries every term of its own margin, so a reader of a fixture can
+ * reconstruct it without knowing the allocator:
+ *
+ * ```
+ * contributionMarginMinor
+ *   =  netRevenueExVatMinor                 // items only, after its share of item discounts
+ *   +  allocatedShippingRevenueExVatMinor   // what the customer paid to ship, allocated
+ *   +  allocatedCodFeeRevenueExVatMinor
+ *   -  cogsMinor
+ *   -  allocatedOutboundShippingMinor
+ *   -  allocatedReturnShippingMinor
+ *   -  allocatedGatewayFeeMinor
+ *   -  allocatedCodCostMinor
+ *   +  reversalImpactMinor
+ * ```
+ *
+ * `netRevenueExVatMinor` stays ITEMS ONLY because that is what a merchant means
+ * by "revenue for this SKU". The order-level revenue a line also earned is
+ * named separately rather than folded in, so neither reading is lost.
  */
 export interface OrderProfitLine {
   readonly orderItemId: OrderItemId;
@@ -115,8 +127,12 @@ export interface OrderProfitLine {
   readonly sku: string | null;
   readonly quantity: number;
 
+  /** This line's share of order-level discounts targeting ITEMS. Already deducted from netRevenue. */
   readonly allocatedOrderDiscountExVatMinor: Minor;
   readonly netRevenueExVatMinor: Minor;
+  /** Order-level revenue allocated to this line, net of discounts targeting it. */
+  readonly allocatedShippingRevenueExVatMinor: Minor;
+  readonly allocatedCodFeeRevenueExVatMinor: Minor;
 
   readonly unitCostMinor: Minor;
   readonly cogsMinor: Minor;

@@ -1,0 +1,233 @@
+{
+  "store": {
+    "storeId": "demo:1",
+    "currency": "SAR",
+    "timezone": "Asia/Riyadh",
+    "vatRegistered": true
+  },
+  "order": {
+    "id": "demo:1:1001",
+    "storeId": "demo:1",
+    "platformOrderId": "1001",
+    "placedAt": "2026-03-01T18:30:00.000Z",
+    "platformUpdatedAt": null,
+    "lifecycle": "open",
+    "paymentState": "partially_refunded",
+    "fulfillmentState": "delivered",
+    "platformStatusId": null,
+    "rawStatusLabel": "delivered",
+    "isTest": false,
+    "fulfillmentMethod": "carrier",
+    "destination": {
+      "countryCode": "SA",
+      "region": "riyadh",
+      "city": "riyadh"
+    },
+    "currency": "SAR",
+    "vatRateBps": 1500,
+    "subtotalExVatMinor": 33000,
+    "vatAmountMinor": 4950,
+    "shippingChargedExVatMinor": 0,
+    "codFeeChargedExVatMinor": 0,
+    "totalIncVatMinor": 37950,
+    "discounts": [],
+    "payments": [
+      {
+        "instrument": "card",
+        "scheme": "visa",
+        "wallet": null,
+        "provider": null,
+        "rawMethodLabel": "visa",
+        "state": "captured",
+        "amountGrossMinor": 37950,
+        "transactionRef": null
+      }
+    ],
+    "customerRef": null,
+    "attribution": {
+      "device": "mobile",
+      "referrerHost": null
+    }
+  },
+  "items": [
+    {
+      "id": "demo:1:1001#L1",
+      "orderId": "demo:1:1001",
+      "platformLineId": "L1",
+      "platformProductId": "P1",
+      "platformVariantId": null,
+      "sku": "SKU-1",
+      "productName": "منتج 1",
+      "quantity": 1,
+      "unitPriceExVatMinor": 11000,
+      "grossLineExVatMinor": 11000,
+      "lineDiscountExVatMinor": 0,
+      "lineTotalExVatMinor": 11000
+    },
+    {
+      "id": "demo:1:1001#L2",
+      "orderId": "demo:1:1001",
+      "platformLineId": "L2",
+      "platformProductId": "P2",
+      "platformVariantId": null,
+      "sku": "SKU-2",
+      "productName": "منتج 2",
+      "quantity": 1,
+      "unitPriceExVatMinor": 11000,
+      "grossLineExVatMinor": 11000,
+      "lineDiscountExVatMinor": 0,
+      "lineTotalExVatMinor": 11000
+    },
+    {
+      "id": "demo:1:1001#L3",
+      "orderId": "demo:1:1001",
+      "platformLineId": "L3",
+      "platformProductId": "P3",
+      "platformVariantId": null,
+      "sku": "SKU-3",
+      "productName": "منتج 3",
+      "quantity": 1,
+      "unitPriceExVatMinor": 11000,
+      "grossLineExVatMinor": 11000,
+      "lineDiscountExVatMinor": 0,
+      "lineTotalExVatMinor": 11000
+    }
+  ],
+  "shipments": [
+    {
+      "id": "demo:1:S1",
+      "orderId": "demo:1:1001",
+      "platformShipmentId": "S1",
+      "direction": "outbound",
+      "status": "delivered",
+      "carrier": "demo_courier",
+      "rawCarrierLabel": "Demo Courier",
+      "carrierCostMinor": 2000,
+      "lines": [],
+      "shippedAt": "2026-03-02T06:00:00.000Z",
+      "deliveredAt": "2026-03-03T06:00:00.000Z",
+      "platformUpdatedAt": null
+    }
+  ],
+  "reversals": [
+    {
+      "id": "demo:1:1001#rev:r9",
+      "orderId": "demo:1:1001",
+      "platformReversalId": null,
+      "kind": "refund",
+      "reason": "goodwill_or_price_adjustment",
+      "rawReasonLabel": null,
+      "occurredAt": "2026-03-11T09:00:00.000Z",
+      "amountExVatMinor": 0,
+      "shippingRefundExVatMinor": 0,
+      "codFeeRefundExVatMinor": 0,
+      "adjustmentExVatMinor": 1000,
+      "vatMinor": 150,
+      "totalIncVatMinor": 1150,
+      "lines": null,
+      "restockOutcome": "not_applicable",
+      "platformUpdatedAt": null
+    }
+  ],
+  "costs": [
+    {
+      "platformProductId": "P1",
+      "platformVariantId": null,
+      "sku": "SKU-1",
+      "unitCostMinor": 4000,
+      "source": "merchant_manual",
+      "costHistoryId": "ch_1"
+    },
+    {
+      "platformProductId": "P2",
+      "platformVariantId": null,
+      "sku": "SKU-2",
+      "unitCostMinor": 4000,
+      "source": "merchant_manual",
+      "costHistoryId": "ch_2"
+    },
+    {
+      "platformProductId": "P3",
+      "platformVariantId": null,
+      "sku": "SKU-3",
+      "unitCostMinor": 4000,
+      "source": "merchant_manual",
+      "costHistoryId": "ch_3"
+    }
+  ],
+  "feeRuleSet": {
+    "id": "frs_2026_01",
+    "currency": "SAR",
+    "gateway": [
+      {
+        "percentBps": 100,
+        "fixedMinor": 0,
+        "minFeeMinor": null,
+        "maxFeeMinor": 20000,
+        "feeVatBps": 1500,
+        "ratesIncludeVat": false,
+        "source": "merchant_entered",
+        "instrument": "card",
+        "scheme": "mada",
+        "provider": null
+      },
+      {
+        "percentBps": 275,
+        "fixedMinor": 100,
+        "minFeeMinor": null,
+        "maxFeeMinor": null,
+        "feeVatBps": 1500,
+        "ratesIncludeVat": false,
+        "source": "merchant_entered",
+        "instrument": "card",
+        "scheme": "visa",
+        "provider": null
+      },
+      {
+        "percentBps": 275,
+        "fixedMinor": 100,
+        "minFeeMinor": null,
+        "maxFeeMinor": null,
+        "feeVatBps": 1500,
+        "ratesIncludeVat": false,
+        "source": "merchant_entered",
+        "instrument": "card",
+        "scheme": "mastercard",
+        "provider": null
+      },
+      {
+        "percentBps": 700,
+        "fixedMinor": 100,
+        "minFeeMinor": null,
+        "maxFeeMinor": null,
+        "feeVatBps": 1500,
+        "ratesIncludeVat": false,
+        "source": "merchant_entered",
+        "instrument": "bnpl",
+        "scheme": null,
+        "provider": null
+      }
+    ],
+    "cod": [
+      {
+        "percentBps": 200,
+        "fixedMinor": 800,
+        "minFeeMinor": null,
+        "maxFeeMinor": null,
+        "feeVatBps": 1500,
+        "ratesIncludeVat": false,
+        "source": "merchant_entered",
+        "carrier": null
+      }
+    ],
+    "shippingFallback": [
+      {
+        "countryCode": null,
+        "region": null,
+        "carrier": null,
+        "direction": "any",
+        "costMinor": 2200
+      }
+    ]
+  }
+}

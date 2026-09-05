@@ -1,0 +1,170 @@
+{
+  "store": {
+    "storeId": "demo:1",
+    "currency": "SAR",
+    "timezone": "Asia/Riyadh",
+    "vatRegistered": true
+  },
+  "order": {
+    "id": "demo:1:1001",
+    "storeId": "demo:1",
+    "platformOrderId": "1001",
+    "placedAt": "2026-03-01T18:30:00.000Z",
+    "platformUpdatedAt": null,
+    "lifecycle": "open",
+    "paymentState": "paid",
+    "fulfillmentState": "delivered",
+    "platformStatusId": null,
+    "rawStatusLabel": "delivered",
+    "isTest": false,
+    "fulfillmentMethod": "carrier",
+    "destination": {
+      "countryCode": "SA",
+      "region": "riyadh",
+      "city": "riyadh"
+    },
+    "currency": "SAR",
+    "vatRateBps": 1500,
+    "subtotalExVatMinor": 3000000,
+    "vatAmountMinor": 450000,
+    "shippingChargedExVatMinor": 0,
+    "codFeeChargedExVatMinor": 0,
+    "totalIncVatMinor": 3450000,
+    "discounts": [],
+    "payments": [
+      {
+        "instrument": "card",
+        "scheme": "mada",
+        "wallet": null,
+        "provider": null,
+        "rawMethodLabel": "mada",
+        "state": "captured",
+        "amountGrossMinor": 3450000,
+        "transactionRef": null
+      }
+    ],
+    "customerRef": null,
+    "attribution": {
+      "device": "mobile",
+      "referrerHost": null
+    }
+  },
+  "items": [
+    {
+      "id": "demo:1:1001#L1",
+      "orderId": "demo:1:1001",
+      "platformLineId": "L1",
+      "platformProductId": "P1",
+      "platformVariantId": null,
+      "sku": "SKU-1",
+      "productName": "منتج 1",
+      "quantity": 1,
+      "unitPriceExVatMinor": 3000000,
+      "grossLineExVatMinor": 3000000,
+      "lineDiscountExVatMinor": 0,
+      "lineTotalExVatMinor": 3000000
+    }
+  ],
+  "shipments": [
+    {
+      "id": "demo:1:S1",
+      "orderId": "demo:1:1001",
+      "platformShipmentId": "S1",
+      "direction": "outbound",
+      "status": "delivered",
+      "carrier": "demo_courier",
+      "rawCarrierLabel": "Demo Courier",
+      "carrierCostMinor": 5000,
+      "lines": [],
+      "shippedAt": "2026-03-02T06:00:00.000Z",
+      "deliveredAt": "2026-03-03T06:00:00.000Z",
+      "platformUpdatedAt": null
+    }
+  ],
+  "reversals": [],
+  "costs": [
+    {
+      "platformProductId": "P1",
+      "platformVariantId": null,
+      "sku": "SKU-1",
+      "unitCostMinor": 2100000,
+      "source": "merchant_manual",
+      "costHistoryId": "ch_1"
+    }
+  ],
+  "feeRuleSet": {
+    "id": "frs_2026_01",
+    "currency": "SAR",
+    "gateway": [
+      {
+        "percentBps": 100,
+        "fixedMinor": 0,
+        "minFeeMinor": null,
+        "maxFeeMinor": 20000,
+        "feeVatBps": 1500,
+        "ratesIncludeVat": false,
+        "source": "merchant_entered",
+        "instrument": "card",
+        "scheme": "mada",
+        "provider": null
+      },
+      {
+        "percentBps": 275,
+        "fixedMinor": 100,
+        "minFeeMinor": null,
+        "maxFeeMinor": null,
+        "feeVatBps": 1500,
+        "ratesIncludeVat": false,
+        "source": "merchant_entered",
+        "instrument": "card",
+        "scheme": "visa",
+        "provider": null
+      },
+      {
+        "percentBps": 275,
+        "fixedMinor": 100,
+        "minFeeMinor": null,
+        "maxFeeMinor": null,
+        "feeVatBps": 1500,
+        "ratesIncludeVat": false,
+        "source": "merchant_entered",
+        "instrument": "card",
+        "scheme": "mastercard",
+        "provider": null
+      },
+      {
+        "percentBps": 700,
+        "fixedMinor": 100,
+        "minFeeMinor": null,
+        "maxFeeMinor": null,
+        "feeVatBps": 1500,
+        "ratesIncludeVat": false,
+        "source": "merchant_entered",
+        "instrument": "bnpl",
+        "scheme": null,
+        "provider": null
+      }
+    ],
+    "cod": [
+      {
+        "percentBps": 200,
+        "fixedMinor": 800,
+        "minFeeMinor": null,
+        "maxFeeMinor": null,
+        "feeVatBps": 1500,
+        "ratesIncludeVat": false,
+        "source": "merchant_entered",
+        "carrier": null
+      }
+    ],
+    "shippingFallback": [
+      {
+        "countryCode": null,
+        "region": null,
+        "carrier": null,
+        "direction": "any",
+        "costMinor": 2200
+      }
+    ]
+  }
+}

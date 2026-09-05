@@ -11,6 +11,20 @@
 export type TermBasis = 'actual' | 'estimated' | 'missing' | 'not_applicable';
 
 /**
+ * What each basis means for the two terms no platform reports.
+ *
+ * `actual` requires a settled figure: a courier's charge on the shipment, or a
+ * processor's own statement. A rate the merchant typed in is `estimated` even
+ * when it is their real contract, because it is a rule applied to an order
+ * rather than the amount that order was actually charged. A published default
+ * we shipped is `estimated` too, and additionally carries
+ * `FEE_RULE_DEFAULT_USED` so the dashboard can say "confirm these".
+ *
+ * That distinction is the product's honesty budget: estimated means we used
+ * your rate card, missing means we are guessing at zero.
+ */
+
+/**
  * Per-term provenance, with a flat level derived from it.
  *
  * A single four-value enum is a flattened 2×2 over what are already six
@@ -26,8 +40,17 @@ export type TermBasis = 'actual' | 'estimated' | 'missing' | 'not_applicable';
  * agree, derived from one, cannot drift.
  */
 export interface ProfitConfidence {
-  /** `derived` — an ex-VAT component was extracted rather than reported. `unreconciled` — the totals identity failed. */
-  readonly revenue: 'reported' | 'derived' | 'unreconciled';
+  /**
+   * `unreconciled` — the order's own totals identity failed, so the revenue
+   * figure is the adapter's arithmetic rather than the merchant's.
+   *
+   * There is deliberately no `derived` member. It would mean "an ex-VAT
+   * component was extracted from a gross figure rather than reported", which is
+   * adapter knowledge the canonical types carry no signal for — so the engine
+   * could never produce it, and a permanently unreachable enum member is a lie
+   * about what the system knows. Adding it later, with the signal, is additive.
+   */
+  readonly revenue: 'reported' | 'unreconciled';
   readonly cogs: TermBasis;
   readonly outboundShipping: TermBasis;
   readonly returnShipping: TermBasis;

@@ -1,81 +1,205 @@
+import { MAX_MINOR, toMinor } from '@ghalla/contracts';
 import type { Bps, Minor } from '@ghalla/contracts';
-import { NotImplementedError } from './not-implemented.js';
 
 /**
  * The money kernel — the most test-worthy module in the repository.
  *
- * Every number a merchant sees passes through these five functions. They are
- * declared here, ahead of the engine, because their behaviour is a domain
- * decision rather than an implementation detail: the rounding mode and the
- * allocation algorithm are visible in the merchant's dashboard.
+ * Every number a merchant sees passes through these functions. Their behaviour
+ * is a domain decision rather than an implementation detail: the rounding mode
+ * and the allocation algorithm are both visible in the dashboard.
+ *
+ * They throw on inputs that cannot occur if `normalizeAndValidate` did its job.
+ * `computeOrderProfit` catches at the top level and returns a rejected result,
+ * so the engine stays total without any of these functions having to invent a
+ * plausible number for impossible input.
  */
 
-/** Sums with an explicit overflow check, so a bad input fails loudly rather than losing precision silently. */
-export function addMinor(..._values: readonly Minor[]): Minor {
-  throw new NotImplementedError('addMinor');
+export class MoneyKernelError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MoneyKernelError';
+  }
+}
+
+const SAFE = Number.MAX_SAFE_INTEGER;
+
+/** Sums with an explicit range check, so a bad input fails loudly rather than losing precision. */
+export function addMinor(...values: readonly Minor[]): Minor {
+  let total = 0;
+  for (const value of values) {
+    total += value;
+    if (!Number.isSafeInteger(total)) {
+      throw new MoneyKernelError(`Sum left the safe-integer range at ${String(total)}.`);
+    }
+  }
+  return toMinor(total);
+}
+
+export function subMinor(a: Minor, b: Minor): Minor {
+  return toMinor(a - b);
 }
 
 /** Sign flip that normalizes negative zero, so `-0` never enters a result. */
-export function negateMinor(_value: Minor): Minor {
-  throw new NotImplementedError('negateMinor');
+export function negateMinor(value: Minor): Minor {
+  return toMinor(value === 0 ? 0 : -value);
 }
 
 /**
- * `value × bps / 10_000`, rounded HALF AWAY FROM ZERO.
+ * Integer division rounding HALF AWAY FROM ZERO.
  *
- * Not `Math.round`, which is half-UP: `Math.round(-1.5) === -1`, so a symmetric
- * charge and its reversal differ by one halala and every refunded order leaves a
- * residue. Half-away-from-zero makes `f(-x) === -f(x)` hold, which is the
- * property that lets a reversal exactly undo a charge.
- *
- * Asserts that the intermediate stays inside the safe-integer range rather than
- * letting it degrade silently — the one failure mode integer money exists to
- * prevent.
+ * Not `Math.round`, which is half-UP: `Math.round(-1.5)` is `-1`, so a charge
+ * and its exact reversal differ by one halala and every refunded order leaves a
+ * residue behind. Half-away-from-zero makes `f(-x) === -f(x)` hold, which is
+ * the property that lets a reversal undo a charge exactly.
  */
-export function mulBps(_value: Minor, _bps: Bps): Minor {
-  throw new NotImplementedError('mulBps');
+function divRoundHalfAwayFromZero(numerator: number, denominator: number): number {
+  if (denominator <= 0) {
+    throw new MoneyKernelError(`Denominator must be positive; received ${String(denominator)}.`);
+  }
+  if (!Number.isSafeInteger(numerator)) {
+    throw new MoneyKernelError(
+      `Intermediate ${String(numerator)} left the safe-integer range, where the arithmetic stops ` +
+        `being exact silently. This is the failure mode integer money exists to prevent.`,
+    );
+  }
+  const negative = numerator < 0;
+  const abs = negative ? -numerator : numerator;
+  const whole = Math.floor(abs / denominator);
+  const remainder = abs - whole * denominator;
+  const rounded = remainder * 2 >= denominator ? whole + 1 : whole;
+  return negative ? -rounded : rounded;
 }
 
 /**
- * `min(max(value, min), max)` — the cap wins when a caller supplies
- * `min > max`, which is a caller defect rather than a representable state.
- * Stated because a rate card's floor and cap are transcribed by hand and the
- * order of the two operations changes the fee on every order under that rule.
- * `null` on either side means unbounded on that side.
+ * `value × bps / 10_000`, rounded half away from zero.
+ *
+ * `MAX_MINOR` is chosen precisely so that `value * 10_000` stays inside
+ * `Number.MAX_SAFE_INTEGER`; a rate above 100% can still exceed it, and does so
+ * loudly rather than silently.
  */
-export function clampMinor(_value: Minor, _min: Minor | null, _max: Minor | null): Minor {
-  throw new NotImplementedError('clampMinor');
+export function mulBps(value: Minor, bps: Bps): Minor {
+  return toMinor(divRoundHalfAwayFromZero(value * bps, 10_000));
+}
+
+/** `null` on either side means unbounded there. The cap wins if a caller supplies min > max. */
+export function clampMinor(value: Minor, min: Minor | null, max: Minor | null): Minor {
+  let out: number = value;
+  if (min !== null && out < min) out = min;
+  if (max !== null && out > max) out = max;
+  return toMinor(out);
 }
 
 /**
  * Splits a VAT-inclusive gross amount into net and VAT.
  *
- * The VAT is returned as the RESIDUAL — `vat = gross - net` — rather than
- * computed independently, so `net + vat === gross` holds by construction rather
- * than by luck. Two independently rounded halves of one amount do not reliably
- * sum back to it.
+ * The VAT is the RESIDUAL — `vat = gross - net` — rather than a second
+ * independent rounding, so `net + vat === gross` holds by construction. Two
+ * separately rounded halves of one amount do not reliably sum back to it.
  */
-export function splitVatInclusive(_gross: Minor, _vatRateBps: Bps): { readonly net: Minor; readonly vat: Minor } {
-  throw new NotImplementedError('splitVatInclusive');
+export function splitVatInclusive(gross: Minor, vatRateBps: Bps): { readonly net: Minor; readonly vat: Minor } {
+  if (vatRateBps < 0) {
+    throw new MoneyKernelError(`A VAT rate may not be negative; received ${String(vatRateBps)} bps.`);
+  }
+  const net = toMinor(divRoundHalfAwayFromZero(gross * 10_000, 10_000 + vatRateBps));
+  return { net, vat: subMinor(gross, net) };
+}
+
+export interface AllocationBucket {
+  readonly key: string;
+  /** Negative weights are clamped to zero: a negative share of a cost is not a thing. */
+  readonly weight: Minor;
 }
 
 /**
  * Distributes a total across weighted buckets by LARGEST REMAINDER, preserving
- * `Σ(allocated) === total` exactly.
+ * `Σ(allocated) === total` EXACTLY.
  *
  * This is not a detail. Naive proportional allocation with the remainder pushed
- * onto the last line produces a NEGATIVE allocation for small totals over many
- * equal lines — a phantom surcharge that flips a SKU's margin sign and fires a
- * false loss-maker flag, which is a headline feature of the product. Largest
- * remainder keeps every share within one minor unit of exact and the sum precise.
+ * onto the last line produces a NEGATIVE allocation for a small total spread
+ * over many equal lines — a phantom surcharge that flips a SKU's margin sign
+ * and fires a false loss-maker flag, which is a headline feature of the
+ * product. Largest remainder keeps every share within one minor unit of exact
+ * and the sum precise.
  *
- * Ties break on remainder descending, then weight descending, then key ascending
- * — never on array index, so re-ingesting an order whose lines arrive in a
- * different order yields identical per-SKU numbers.
+ * Ties break on remainder descending, then weight descending, then key
+ * ascending — never on array index, so re-ingesting an order whose lines
+ * arrive in a different order yields identical per-SKU numbers.
+ *
+ * When every weight is zero there is no revenue basis to divide by, so the
+ * total is split as evenly as it divides. That is the 100%-discount order, and
+ * it must still tie.
  */
 export function allocateMinor(
-  _total: Minor,
-  _buckets: readonly { readonly key: string; readonly weight: Minor }[],
+  total: Minor,
+  buckets: readonly AllocationBucket[],
 ): ReadonlyMap<string, Minor> {
-  throw new NotImplementedError('allocateMinor');
+  const out = new Map<string, Minor>();
+  if (buckets.length === 0) {
+    if (total !== 0) {
+      throw new MoneyKernelError(
+        `Cannot allocate ${String(total)} across zero buckets without breaking the sum invariant. ` +
+          `An order with no lines keeps its order-level amounts in the totals.`,
+      );
+    }
+    return out;
+  }
+
+  const seen = new Set<string>();
+  for (const bucket of buckets) {
+    if (seen.has(bucket.key)) {
+      throw new MoneyKernelError(`Duplicate allocation key ${JSON.stringify(bucket.key)}.`);
+    }
+    seen.add(bucket.key);
+  }
+
+  const negative = total < 0;
+  const magnitude = BigInt(negative ? -total : total);
+
+  // All-zero weights: no revenue basis, so divide evenly. Weight 1 each.
+  const rawWeights = buckets.map((b) => (b.weight > 0 ? BigInt(b.weight) : 0n));
+  const weightSum = rawWeights.reduce((a, b) => a + b, 0n);
+  const weights = weightSum === 0n ? buckets.map(() => 1n) : rawWeights;
+  const denominator = weightSum === 0n ? BigInt(buckets.length) : weightSum;
+
+  const rows = buckets.map((bucket, index) => {
+    const weight = weights[index] ?? 0n;
+    const numerator = magnitude * weight;
+    const base = numerator / denominator;
+    return { key: bucket.key, base, remainder: numerator - base * denominator, weight };
+  });
+
+  const distributed = rows.reduce((sum, row) => sum + row.base, 0n);
+  let shortfall = magnitude - distributed;
+
+  const order = [...rows].sort((a, b) => {
+    if (a.remainder !== b.remainder) return a.remainder > b.remainder ? -1 : 1;
+    if (a.weight !== b.weight) return a.weight > b.weight ? -1 : 1;
+    return a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+  });
+
+  const extra = new Map<string, bigint>();
+  for (const row of order) {
+    if (shortfall <= 0n) break;
+    extra.set(row.key, 1n);
+    shortfall -= 1n;
+  }
+
+  for (const row of rows) {
+    const amount = row.base + (extra.get(row.key) ?? 0n);
+    if (amount > BigInt(MAX_MINOR)) {
+      throw new MoneyKernelError(`Allocated share ${String(amount)} exceeds the money range.`);
+    }
+    out.set(row.key, toMinor(negative ? -Number(amount) : Number(amount)));
+  }
+  return out;
 }
+
+/** Guards a value that arithmetic produced rather than a constructor. */
+export function assertInRange(value: number, label: string): Minor {
+  if (!Number.isSafeInteger(value) || value > MAX_MINOR || value < -MAX_MINOR) {
+    throw new MoneyKernelError(`${label} is out of the money range: ${String(value)}.`);
+  }
+  return toMinor(value);
+}
+
+export { SAFE as SAFE_INTEGER_CEILING };

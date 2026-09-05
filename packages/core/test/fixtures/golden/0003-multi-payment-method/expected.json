@@ -1,0 +1,107 @@
+{
+  "status": "computed",
+  "orderId": "demo:1:1001",
+  "storeId": "demo:1",
+  "currency": "SAR",
+  "businessDate": "2026-03-01",
+  "calcVersion": 1,
+  "feeRuleSetId": "frs_2026_01",
+  "recognition": {
+    "kind": "recognized"
+  },
+  "totals": {
+    "itemsRevenueExVatMinor": 30000,
+    "shippingRevenueExVatMinor": 1000,
+    "codFeeRevenueExVatMinor": 500,
+    "orderDiscountExVatMinor": 0,
+    "revenueExVatMinor": 31500,
+    "vatCollectedMinor": 4725,
+    "cogsMinor": 11500,
+    "outboundShippingCostMinor": 2500,
+    "returnShippingCostMinor": 0,
+    "gatewayFeeExVatMinor": 1025,
+    "gatewayFeeVatMinor": 154,
+    "gatewayFeeCostMinor": 1025,
+    "codCostExVatMinor": 925,
+    "codCostVatMinor": 139,
+    "codCostMinor": 925,
+    "reversedRevenueExVatMinor": 0,
+    "restockedCogsMinor": 0,
+    "reversalImpactMinor": 0,
+    "contributionMarginMinor": 15550,
+    "marginBps": 4937,
+    "costCoveredRevenueExVatMinor": 30000
+  },
+  "lines": [
+    {
+      "orderItemId": "demo:1:1001#L1",
+      "platformProductId": "P1",
+      "platformVariantId": null,
+      "sku": "SKU-1",
+      "quantity": 1,
+      "allocatedOrderDiscountExVatMinor": 0,
+      "netRevenueExVatMinor": 20000,
+      "allocatedShippingRevenueExVatMinor": 667,
+      "allocatedCodFeeRevenueExVatMinor": 333,
+      "unitCostMinor": 8000,
+      "cogsMinor": 8000,
+      "costSource": "merchant_manual",
+      "costHistoryId": "ch_1",
+      "allocatedOutboundShippingMinor": 1667,
+      "allocatedReturnShippingMinor": 0,
+      "allocatedGatewayFeeMinor": 683,
+      "allocatedCodCostMinor": 617,
+      "reversedQuantity": 0,
+      "reversedRevenueExVatMinor": 0,
+      "restockedCogsMinor": 0,
+      "reversalImpactMinor": 0,
+      "contributionMarginMinor": 10033,
+      "costCoveredRevenueExVatMinor": 20000
+    },
+    {
+      "orderItemId": "demo:1:1001#L2",
+      "platformProductId": "P2",
+      "platformVariantId": null,
+      "sku": "SKU-2",
+      "quantity": 1,
+      "allocatedOrderDiscountExVatMinor": 0,
+      "netRevenueExVatMinor": 10000,
+      "allocatedShippingRevenueExVatMinor": 333,
+      "allocatedCodFeeRevenueExVatMinor": 167,
+      "unitCostMinor": 3500,
+      "cogsMinor": 3500,
+      "costSource": "merchant_manual",
+      "costHistoryId": "ch_2",
+      "allocatedOutboundShippingMinor": 833,
+      "allocatedReturnShippingMinor": 0,
+      "allocatedGatewayFeeMinor": 342,
+      "allocatedCodCostMinor": 308,
+      "reversedQuantity": 0,
+      "reversedRevenueExVatMinor": 0,
+      "restockedCogsMinor": 0,
+      "reversalImpactMinor": 0,
+      "contributionMarginMinor": 5517,
+      "costCoveredRevenueExVatMinor": 10000
+    }
+  ],
+  "confidence": {
+    "revenue": "reported",
+    "cogs": "actual",
+    "outboundShipping": "actual",
+    "returnShipping": "not_applicable",
+    "gatewayFee": "estimated",
+    "codCost": "estimated",
+    "reversal": "not_applicable",
+    "level": "estimated"
+  },
+  "diagnostics": [
+    {
+      "code": "CARD_SCHEME_UNKNOWN",
+      "severity": "warning",
+      "subject": {
+        "kind": "payment",
+        "index": 1
+      }
+    }
+  ]
+}

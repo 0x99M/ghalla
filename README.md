@@ -54,15 +54,18 @@ tooling/
 
 ## Status
 
-**Phase 1, step 1 — the domain model, awaiting sign-off.**
+**Phase 1, step 1 complete — the domain model and the profit engine.**
 
-The type surface is complete. The profit arithmetic is deliberately **not** implemented:
-every function body in `packages/core` throws `NotImplementedError`, because the point of
-step 1 is to agree on the model before it calcifies.
+`computeOrderProfit` is implemented and pure: no I/O, no clock, no randomness. 11 golden
+fixtures, 103 tests, `pnpm verify` green.
 
-Read **[docs/0001-domain-model.md](./docs/0001-domain-model.md)** — the seven decisions that
-matter, every deviation from the original brief with its justification, and six open product
-questions.
+- **[docs/0001-domain-model.md](./docs/0001-domain-model.md)** — the seven decisions that
+  shape the canonical types, every deviation from the original brief with its justification.
+- **[docs/0002-profit-engine.md](./docs/0002-profit-engine.md)** — the six product questions
+  now decided, what implementing the arithmetic changed about the model, and how the fixtures
+  are checked independently of the implementation that produced them.
+
+Next: `persistence`, then `ingestion` against a fake adapter, then the first real platform.
 
 ## Working on it
 

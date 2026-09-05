@@ -1,0 +1,73 @@
+{
+  "status": "computed",
+  "orderId": "demo:1:1001",
+  "storeId": "demo:1",
+  "currency": "SAR",
+  "businessDate": "2026-03-01",
+  "calcVersion": 1,
+  "feeRuleSetId": "frs_2026_01",
+  "recognition": {
+    "kind": "recognized"
+  },
+  "totals": {
+    "itemsRevenueExVatMinor": 20000,
+    "shippingRevenueExVatMinor": 1000,
+    "codFeeRevenueExVatMinor": 0,
+    "orderDiscountExVatMinor": 0,
+    "revenueExVatMinor": 21000,
+    "vatCollectedMinor": 0,
+    "cogsMinor": 9000,
+    "outboundShippingCostMinor": 1900,
+    "returnShippingCostMinor": 0,
+    "gatewayFeeExVatMinor": 678,
+    "gatewayFeeVatMinor": 102,
+    "gatewayFeeCostMinor": 780,
+    "codCostExVatMinor": 0,
+    "codCostVatMinor": 0,
+    "codCostMinor": 0,
+    "reversedRevenueExVatMinor": 0,
+    "restockedCogsMinor": 0,
+    "reversalImpactMinor": 0,
+    "contributionMarginMinor": 9320,
+    "marginBps": 4438,
+    "costCoveredRevenueExVatMinor": 20000
+  },
+  "lines": [
+    {
+      "orderItemId": "demo:1:1001#L1",
+      "platformProductId": "P1",
+      "platformVariantId": null,
+      "sku": "SKU-1",
+      "quantity": 1,
+      "allocatedOrderDiscountExVatMinor": 0,
+      "netRevenueExVatMinor": 20000,
+      "allocatedShippingRevenueExVatMinor": 1000,
+      "allocatedCodFeeRevenueExVatMinor": 0,
+      "unitCostMinor": 9000,
+      "cogsMinor": 9000,
+      "costSource": "merchant_manual",
+      "costHistoryId": "ch_1",
+      "allocatedOutboundShippingMinor": 1900,
+      "allocatedReturnShippingMinor": 0,
+      "allocatedGatewayFeeMinor": 780,
+      "allocatedCodCostMinor": 0,
+      "reversedQuantity": 0,
+      "reversedRevenueExVatMinor": 0,
+      "restockedCogsMinor": 0,
+      "reversalImpactMinor": 0,
+      "contributionMarginMinor": 9320,
+      "costCoveredRevenueExVatMinor": 20000
+    }
+  ],
+  "confidence": {
+    "revenue": "reported",
+    "cogs": "actual",
+    "outboundShipping": "actual",
+    "returnShipping": "not_applicable",
+    "gatewayFee": "estimated",
+    "codCost": "not_applicable",
+    "reversal": "not_applicable",
+    "level": "estimated"
+  },
+  "diagnostics": []
+}
