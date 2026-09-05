@@ -1,4 +1,4 @@
-import { toLocalDate } from '@ghalla/contracts';
+import { isInstant, toLocalDate } from '@ghalla/contracts';
 import type { Instant, LocalDate } from '@ghalla/contracts';
 
 /**
@@ -22,6 +22,18 @@ export class InvalidTimezoneError extends Error {
   }
 }
 
+/**
+ * Distinct from InvalidTimezoneError on purpose. Telling a merchant their
+ * timezone is invalid when their adapter's date formatting is what is broken
+ * sends them to the wrong screen — and DIAGNOSTIC_CODES becomes dashboard copy.
+ */
+export class MalformedInstantError extends Error {
+  constructor(raw: string) {
+    super(`Not a well-formed UTC instant: ${JSON.stringify(raw)}.`);
+    this.name = 'MalformedInstantError';
+  }
+}
+
 const INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/;
 
 /** Days since 1970-01-01 from a proleptic Gregorian civil date. */
@@ -35,9 +47,13 @@ function daysFromCivil(year: number, month: number, day: number): number {
 }
 
 export function epochMillis(instant: Instant): number {
+  // isInstant carries the calendar check, so '2026-02-30' is rejected rather
+  // than rolled over into March — the exact behaviour contracts/time.ts calls
+  // "the wrong behaviour for a validator".
+  if (!isInstant(instant)) throw new MalformedInstantError(String(instant));
   const match = INSTANT.exec(instant);
   if (match === null) {
-    throw new InvalidTimezoneError(`unparseable instant ${String(instant)}`);
+    throw new MalformedInstantError(String(instant));
   }
   const [, y = '', mo = '', d = '', h = '', mi = '', s = '', ms = ''] = match;
   return (
@@ -50,6 +66,10 @@ export function epochMillis(instant: Instant): number {
 }
 
 export function businessDateOf(instant: Instant, timezone: string): LocalDate {
+  // `timeZone: undefined` means "use the runtime default", which would make the
+  // business date depend on which machine ran the job.
+  if (typeof timezone !== 'string' || timezone === '') throw new InvalidTimezoneError(String(timezone));
+  const millis = epochMillis(instant);
   let parts: readonly Intl.DateTimeFormatPart[];
   try {
     parts = new Intl.DateTimeFormat('en-US', {
@@ -57,7 +77,7 @@ export function businessDateOf(instant: Instant, timezone: string): LocalDate {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    }).formatToParts(epochMillis(instant));
+    }).formatToParts(millis);
   } catch {
     throw new InvalidTimezoneError(timezone);
   }

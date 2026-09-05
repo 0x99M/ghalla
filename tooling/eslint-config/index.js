@@ -154,9 +154,10 @@ export default tseslint.config(
   //
   // These rules need NO module resolution, so they still hold on a fresh clone
   // before install, and they cannot be silently disarmed by a resolver upgrade.
-  // They are one of three layers; the other two are the pnpm dependency graph
-  // (which fails at resolve time and no eslint-disable reaches) and
-  // dependency-cruiser (which sees dynamic imports and transitive reach).
+  // They are layer L3 of four. The others: the pnpm dependency graph (L1, which
+  // fails at resolve time and no eslint-disable reaches), the compiler's rootDir
+  // and empty `types` (L2), and dependency-cruiser (L4, which sees dynamic
+  // imports and transitive reach). See the table in README.md.
   // ------------------------------------------------------------------------
   {
     files: PURE_GLOBS,

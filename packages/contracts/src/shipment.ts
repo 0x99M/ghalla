@@ -3,7 +3,15 @@ import type { Minor } from './money.js';
 import type { OrderId, OrderItemId, ShipmentId } from './ids.js';
 import type { Instant } from './time.js';
 
-/** Which lines travelled in this parcel. Enables per-SKU shipping attribution under split fulfilment. */
+/**
+ * Which lines travelled in this parcel.
+ *
+ * Read by the engine: when every live leg reports its mapping, each parcel's
+ * cost is attributed to the lines that were actually in it. That matters
+ * because revenue share is ANTI-correlated with freight in split fulfilment — a
+ * heavy cheap item and a light expensive one — and getting it backwards flips a
+ * SKU's margin sign. Empty falls back to an order-wide revenue split.
+ */
 export interface ShipmentLine {
   readonly orderItemId: OrderItemId;
   readonly quantity: number;

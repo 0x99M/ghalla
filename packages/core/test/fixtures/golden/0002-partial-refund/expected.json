@@ -4,7 +4,7 @@
   "storeId": "demo:1",
   "currency": "SAR",
   "businessDate": "2026-03-01",
-  "calcVersion": 1,
+  "calcVersion": 2,
   "feeRuleSetId": "frs_2026_01",
   "recognition": {
     "kind": "recognized"
@@ -48,14 +48,14 @@
       "costSource": "merchant_manual",
       "costHistoryId": "ch_1",
       "allocatedOutboundShippingMinor": 360,
-      "allocatedReturnShippingMinor": 300,
+      "allocatedReturnShippingMinor": 0,
       "allocatedGatewayFeeMinor": 349,
       "allocatedCodCostMinor": 0,
       "reversedQuantity": 0,
       "reversedRevenueExVatMinor": 0,
       "restockedCogsMinor": 0,
       "reversalImpactMinor": 0,
-      "contributionMarginMinor": 5391,
+      "contributionMarginMinor": 5691,
       "costCoveredRevenueExVatMinor": 10000
     },
     {
@@ -73,14 +73,14 @@
       "costSource": "merchant_manual",
       "costHistoryId": "ch_2",
       "allocatedOutboundShippingMinor": 900,
-      "allocatedReturnShippingMinor": 750,
+      "allocatedReturnShippingMinor": 1500,
       "allocatedGatewayFeeMinor": 873,
       "allocatedCodCostMinor": 0,
       "reversedQuantity": 1,
       "reversedRevenueExVatMinor": 25000,
       "restockedCogsMinor": 9000,
       "reversalImpactMinor": -16000,
-      "contributionMarginMinor": -1523,
+      "contributionMarginMinor": -2273,
       "costCoveredRevenueExVatMinor": 25000
     },
     {
@@ -98,14 +98,14 @@
       "costSource": "merchant_manual",
       "costHistoryId": "ch_3",
       "allocatedOutboundShippingMinor": 540,
-      "allocatedReturnShippingMinor": 450,
+      "allocatedReturnShippingMinor": 0,
       "allocatedGatewayFeeMinor": 523,
       "allocatedCodCostMinor": 0,
       "reversedQuantity": 0,
       "reversedRevenueExVatMinor": 0,
       "restockedCogsMinor": 0,
       "reversalImpactMinor": 0,
-      "contributionMarginMinor": 8087,
+      "contributionMarginMinor": 8537,
       "costCoveredRevenueExVatMinor": 15000
     }
   ],

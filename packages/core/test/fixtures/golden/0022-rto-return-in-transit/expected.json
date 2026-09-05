@@ -1,0 +1,89 @@
+{
+  "status": "computed",
+  "orderId": "demo:1:1001",
+  "storeId": "demo:1",
+  "currency": "SAR",
+  "businessDate": "2026-03-01",
+  "calcVersion": 2,
+  "feeRuleSetId": "frs_2026_01",
+  "recognition": {
+    "kind": "cost_only",
+    "reason": "rto_uncollected"
+  },
+  "totals": {
+    "itemsRevenueExVatMinor": 0,
+    "shippingRevenueExVatMinor": 0,
+    "codFeeRevenueExVatMinor": 0,
+    "orderDiscountExVatMinor": 0,
+    "revenueExVatMinor": 0,
+    "vatCollectedMinor": 0,
+    "cogsMinor": 12000,
+    "outboundShippingCostMinor": 2200,
+    "returnShippingCostMinor": 2200,
+    "gatewayFeeExVatMinor": 0,
+    "gatewayFeeVatMinor": 0,
+    "gatewayFeeCostMinor": 0,
+    "codCostExVatMinor": 0,
+    "codCostVatMinor": 0,
+    "codCostMinor": 0,
+    "reversedRevenueExVatMinor": 0,
+    "restockedCogsMinor": 0,
+    "reversalImpactMinor": 0,
+    "contributionMarginMinor": -16400,
+    "marginBps": null,
+    "costCoveredRevenueExVatMinor": 0
+  },
+  "lines": [
+    {
+      "orderItemId": "demo:1:1001#L1",
+      "platformProductId": "P1",
+      "platformVariantId": null,
+      "sku": "SKU-1",
+      "quantity": 1,
+      "allocatedOrderDiscountExVatMinor": 0,
+      "netRevenueExVatMinor": 0,
+      "allocatedShippingRevenueExVatMinor": 0,
+      "allocatedCodFeeRevenueExVatMinor": 0,
+      "unitCostMinor": 12000,
+      "cogsMinor": 12000,
+      "costSource": "merchant_manual",
+      "costHistoryId": "ch_1",
+      "allocatedOutboundShippingMinor": 2200,
+      "allocatedReturnShippingMinor": 2200,
+      "allocatedGatewayFeeMinor": 0,
+      "allocatedCodCostMinor": 0,
+      "reversedQuantity": 0,
+      "reversedRevenueExVatMinor": 0,
+      "restockedCogsMinor": 0,
+      "reversalImpactMinor": 0,
+      "contributionMarginMinor": -16400,
+      "costCoveredRevenueExVatMinor": 0
+    }
+  ],
+  "confidence": {
+    "revenue": "reported",
+    "cogs": "estimated",
+    "outboundShipping": "actual",
+    "returnShipping": "actual",
+    "gatewayFee": "not_applicable",
+    "codCost": "not_applicable",
+    "reversal": "not_applicable",
+    "level": "estimated"
+  },
+  "diagnostics": [
+    {
+      "code": "RECOGNITION_COST_ONLY",
+      "severity": "warning",
+      "subject": {
+        "kind": "order"
+      }
+    },
+    {
+      "code": "RESTOCK_UNKNOWN",
+      "severity": "warning",
+      "subject": {
+        "kind": "order"
+      }
+    }
+  ]
+}

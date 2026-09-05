@@ -26,6 +26,14 @@ export interface OrderRevenue {
   readonly orderDiscountExVatMinor: Minor;
   readonly revenueExVatMinor: Minor;
   readonly vatCollectedMinor: Minor;
+  /**
+   * The shipping and COD-fee discounts, already zeroed on a non-recognized
+   * order. Returned from here rather than re-read from `order.discounts` by the
+   * caller: a second source of truth for the same fact is how the per-line sums
+   * came to disagree with the totals by exactly the discount.
+   */
+  readonly shippingDiscountExVatMinor: Minor;
+  readonly codFeeDiscountExVatMinor: Minor;
   readonly reconciles: boolean;
 }
 
@@ -95,7 +103,11 @@ export function computeRevenue(
     order.codFeeChargedExVatMinor,
     order.vatAmountMinor,
   );
-  const subtotalMatches = order.subtotalExVatMinor === itemsGross || items.length === 0;
+  // NOT waived when items is empty. A genuine no-items order has subtotal 0 and
+  // itemsGross 0, so the equality already holds — waiving it instead hides the
+  // case it exists to catch: an order whose items failed to ingest, which would
+  // otherwise report its item revenue as vanished at confidence `exact`.
+  const subtotalMatches = order.subtotalExVatMinor === itemsGross;
   const reconciles = expectedTotal === order.totalIncVatMinor && subtotalMatches;
   if (!reconciles) diagnostics.push(onOrder('TOTALS_DO_NOT_RECONCILE'));
   if (items.length === 0) diagnostics.push(onOrder('ORDER_HAS_NO_ITEMS'));
@@ -116,6 +128,8 @@ export function computeRevenue(
         orderDiscountExVatMinor: ZERO,
         revenueExVatMinor: ZERO,
         vatCollectedMinor: ZERO,
+        shippingDiscountExVatMinor: ZERO,
+        codFeeDiscountExVatMinor: ZERO,
         reconciles,
       },
       diagnostics,
@@ -138,16 +152,10 @@ export function computeRevenue(
       orderDiscountExVatMinor: orderDiscount,
       revenueExVatMinor: revenue,
       vatCollectedMinor: order.vatAmountMinor,
+      shippingDiscountExVatMinor: shippingDiscount,
+      codFeeDiscountExVatMinor: codDiscount,
       reconciles,
     },
     diagnostics,
   };
-}
-
-/** The shipping and COD-fee discounts, so the allocator can net them off the right term. */
-export function targetedDiscounts(order: CanonicalOrder): {
-  readonly shipping: Minor;
-  readonly codFee: Minor;
-} {
-  return { shipping: unreflected(order, 'shipping'), codFee: unreflected(order, 'cod_fee') };
 }

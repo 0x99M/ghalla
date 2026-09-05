@@ -81,7 +81,11 @@ export function toBps(value: number): Bps {
   if (!Number.isSafeInteger(value)) {
     throw new PrecisionError(`Basis points must be an integer; received ${String(value)}.`);
   }
-  return value as Bps;
+  // Normalize negative zero for the same reason `toMinor` does. A margin rate of
+  // -0 makes `marginBps < 0` false, so a loss-maker query written on the rate
+  // silently drops the row — and JSON.stringify writes "0", so the value cannot
+  // even round-trip a golden fixture.
+  return (value === 0 ? 0 : value) as Bps;
 }
 
 const EXPONENTS: Readonly<Record<CurrencyCode, MinorExponent>> = {

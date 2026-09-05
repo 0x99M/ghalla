@@ -31,6 +31,9 @@ describe('businessDateOf', () => {
   });
 });
 
+const shipment = (over: Partial<CanonicalShipment>): CanonicalShipment =>
+  ({ direction: 'outbound', status: 'delivered', ...over }) as CanonicalShipment;
+
 const order = (over: Partial<CanonicalOrder>): CanonicalOrder =>
   ({
     isTest: false,
@@ -44,42 +47,77 @@ describe('computeRecognition', () => {
   it('treats a refused cash-on-delivery parcel as cost-only', () => {
     // The case the whole three-axis status model exists for: no money moved, so
     // there is no refund record, and a one-axis model calls this profitable.
-    expect(computeRecognition(order({ paymentState: 'unpaid', fulfillmentState: 'rto' }))).toEqual({
+    expect(computeRecognition(order({ paymentState: 'unpaid', fulfillmentState: 'rto' }), [])).toEqual({
       kind: 'cost_only',
       reason: 'rto_uncollected',
     });
   });
 
   it('does NOT treat a prepaid return as cost-only — that money really moved', () => {
-    expect(computeRecognition(order({ paymentState: 'refunded', fulfillmentState: 'rto' }))).toEqual({
+    expect(computeRecognition(order({ paymentState: 'refunded', fulfillmentState: 'rto' }), [])).toEqual({
       kind: 'recognized',
     });
   });
 
   it('separates a cancellation that cost something from one that did not', () => {
-    expect(computeRecognition(order({ lifecycle: 'cancelled', paymentState: 'paid' }))).toEqual({
+    expect(computeRecognition(order({ lifecycle: 'cancelled', paymentState: 'paid' }), [])).toEqual({
       kind: 'cost_only',
       reason: 'cancelled_after_capture',
     });
     expect(
-      computeRecognition(order({ lifecycle: 'cancelled', paymentState: 'unpaid', fulfillmentState: 'in_transit' })),
+      computeRecognition(order({ lifecycle: 'cancelled', paymentState: 'unpaid', fulfillmentState: 'in_transit' }), []),
     ).toEqual({ kind: 'cost_only', reason: 'cancelled_after_dispatch' });
     expect(
-      computeRecognition(order({ lifecycle: 'cancelled', paymentState: 'unpaid', fulfillmentState: 'unfulfilled' })),
+      computeRecognition(order({ lifecycle: 'cancelled', paymentState: 'unpaid', fulfillmentState: 'unfulfilled' }), []),
     ).toEqual({ kind: 'excluded', reason: 'cancelled_before_economic_effect' });
   });
 
+  it('counts an authorized-but-never-captured RTO as cost-only', () => {
+    // Money reserved and never captured is money the merchant never had, and on
+    // a refused parcel never will. One enum member away from the set that
+    // catches the loss shape the whole model exists for.
+    expect(computeRecognition(order({ paymentState: 'authorized', fulfillmentState: 'rto' }), [])).toEqual({
+      kind: 'cost_only',
+      reason: 'rto_uncollected',
+    });
+  });
+
+  it('does not book revenue for a payment that never settled, whatever the lifecycle says', () => {
+    // Platforms routinely leave an order `open` after a void or a decline.
+    expect(computeRecognition(order({ paymentState: 'voided', fulfillmentState: 'unfulfilled' }), [])).toEqual({
+      kind: 'excluded',
+      reason: 'cancelled_before_economic_effect',
+    });
+    expect(computeRecognition(order({ paymentState: 'failed', fulfillmentState: 'in_transit' }), [])).toEqual({
+      kind: 'cost_only',
+      reason: 'payment_not_settled',
+    });
+  });
+
+  it('keeps revenue on a cancelled order that was only partly refunded', () => {
+    // Money moved and only part of it came back: that is the reason revenue
+    // must count, and the reversal records remove the rest.
+    expect(
+      computeRecognition(order({ lifecycle: 'cancelled', paymentState: 'partially_refunded' }), []),
+    ).toEqual({ kind: 'recognized' });
+  });
+
+  it('treats a lost parcel as terminal rather than a completed sale', () => {
+    const lost = [shipment({ status: 'lost' })];
+    expect(computeRecognition(order({ paymentState: 'unpaid', fulfillmentState: 'in_transit' }), lost)).toEqual({
+      kind: 'cost_only',
+      reason: 'goods_lost',
+    });
+  });
+
   it('excludes test orders and drafts before anything else', () => {
-    expect(computeRecognition(order({ isTest: true, fulfillmentState: 'rto', paymentState: 'unpaid' }))).toEqual({
+    expect(computeRecognition(order({ isTest: true, fulfillmentState: 'rto', paymentState: 'unpaid' }), [])).toEqual({
       kind: 'excluded',
       reason: 'test_order',
     });
-    expect(computeRecognition(order({ lifecycle: 'draft' }))).toEqual({ kind: 'excluded', reason: 'draft' });
+    expect(computeRecognition(order({ lifecycle: 'draft' }), [])).toEqual({ kind: 'excluded', reason: 'draft' });
   });
 });
-
-const shipment = (over: Partial<CanonicalShipment>): CanonicalShipment =>
-  ({ direction: 'outbound', status: 'delivered', ...over }) as CanonicalShipment;
 
 describe('RTO goods recovery', () => {
   it('credits COGS back only once the return leg has actually arrived', async () => {

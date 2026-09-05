@@ -20,10 +20,11 @@ export interface FeeFormula {
   /**
    * Couriers commonly quote a percentage with a floor.
    *
-   * `minFeeMinor <= maxFeeMinor` is a caller invariant, enforced where rate
-   * cards are entered rather than here. Transposing the two changes the fee on
-   * every order under that rule, and which of the two equally natural lines an
-   * implementer writes first decides it.
+   * `minFeeMinor <= maxFeeMinor` is enforced by `normalizeAndValidate`, which
+   * rejects the order with `FEE_RULE_INVALID` rather than applying a clamp whose
+   * cap silently wins. Transposing the two used to invent SAR 199 of margin on a
+   * single order, and which of two equally natural lines an implementer writes
+   * first decided it.
    */
   readonly minFeeMinor: Minor | null;
   /**

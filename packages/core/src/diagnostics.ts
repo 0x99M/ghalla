@@ -30,6 +30,10 @@ export const DIAGNOSTIC_CODES = [
   'RESTOCK_UNKNOWN',
   'REVERSAL_LINES_ALLOCATED',
   'REVERSAL_LINE_UNMATCHED',
+  /** A reversal's line amounts do not sum to the item revenue it claims to reverse. */
+  'REVERSAL_TOTAL_MISMATCH',
+  /** Every live outbound leg is lost. The goods are gone and the cash will not arrive. */
+  'SHIPMENT_LOST',
   'TOTALS_DO_NOT_RECONCILE',
   'ORDER_HAS_NO_ITEMS',
   'RECOGNITION_COST_ONLY',
@@ -41,6 +45,19 @@ export const DIAGNOSTIC_CODES = [
   'REVERSAL_ORDER_ID_MISMATCH',
   'NON_INTEGER_MINOR_UNITS',
   'NEGATIVE_QUANTITY',
+  /** Distinct from negative: 2.5 of a thing, or NaN. Naming it NEGATIVE_QUANTITY
+   *  would tell a merchant something untrue in their own dashboard. */
+  'NON_INTEGER_QUANTITY',
+  'DUPLICATE_ITEM_ID',
+  /** Two rules with the same key: which one applies would depend on row order. */
+  'DUPLICATE_RULE_KEY',
+  /** A rate card that cannot be applied: a fractional rate, a negative percentage,
+   *  a floor above its cap. Names the rate card rather than blaming the engine. */
+  'FEE_RULE_INVALID',
+  /** The order, store or fee rule set is absent or malformed. A caller defect. */
+  'MALFORMED_INPUT',
+  /** placedAt is not a well-formed UTC instant. NOT the store's timezone. */
+  'MALFORMED_TIMESTAMP',
   /** The store's IANA zone is not one this runtime knows, so no business date exists. */
   'INVALID_TIMEZONE',
   /**

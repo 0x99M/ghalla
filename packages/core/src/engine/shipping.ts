@@ -6,6 +6,7 @@ import type { TermBasis } from '../confidence.js';
 import { addMinor } from '../money.js';
 import { diagnostic, onOrder } from './diagnostics-builder.js';
 import type { Computed } from './diagnostics-builder.js';
+import { DISPATCHED } from './recognition.js';
 
 const ZERO = toMinor(0);
 
@@ -21,19 +22,35 @@ const LIVE = new Set([
   'unknown',
 ]);
 
+export interface ShipmentCost {
+  readonly shipmentId: string;
+  readonly costMinor: Minor;
+  /** Which lines travelled in this parcel, when the platform reported the mapping. */
+  readonly lineIds: readonly string[];
+}
+
 export interface ShippingLeg {
   readonly costMinor: Minor;
   readonly basis: TermBasis;
+  /**
+   * Per-parcel costs, so freight can be attributed to the SKUs that actually
+   * travelled in each one rather than smeared across the order by revenue.
+   */
+  readonly parcels: readonly ShipmentCost[];
 }
 
 /**
- * Specificity match: a rule matches only where its non-null fields agree, and
- * the most specific match wins.
+ * Specificity match, with DIRECTION as a filter rather than a score.
+ *
+ * Direction is not a weak signal that a country row should outrank — a return
+ * leg genuinely prices differently, and return shipping is a separately named
+ * headline term. Scoring it at one point meant a merchant who added their
+ * return rate on top of a blended national rate kept paying the blended rate on
+ * every RTO, which is exactly the upgrade path the onboarding design promises.
  *
  * A row with every field null is a legitimate configuration, not a degenerate
- * one — it is the single blended per-shipment number a merchant types at
- * onboarding, which is the recommended way to get a store to first value
- * without a rate-card form standing in the way.
+ * one: it is the single blended per-shipment number a merchant types at
+ * onboarding.
  */
 export function matchShippingRule(
   rules: readonly ShippingFallbackRule[],
@@ -41,36 +58,43 @@ export function matchShippingRule(
   carrier: string | null,
   direction: ShipmentDirection,
 ): ShippingFallbackRule | null {
-  let best: ShippingFallbackRule | null = null;
-  let bestScore = -1;
-  for (const rule of rules) {
-    if (rule.countryCode !== null && rule.countryCode !== order.destination?.countryCode) continue;
-    if (rule.region !== null && rule.region !== order.destination?.region) continue;
-    if (rule.carrier !== null && rule.carrier !== carrier) continue;
-    if (rule.direction !== 'any' && rule.direction !== direction) continue;
-    const score =
-      (rule.countryCode !== null ? 8 : 0) +
-      (rule.region !== null ? 4 : 0) +
-      (rule.carrier !== null ? 2 : 0) +
-      (rule.direction !== 'any' ? 1 : 0);
-    if (score > bestScore) {
-      best = rule;
-      bestScore = score;
+  const geographyMatches = (rule: ShippingFallbackRule): boolean => {
+    if (rule.countryCode !== null && rule.countryCode !== order.destination?.countryCode) return false;
+    if (rule.region !== null && rule.region !== order.destination?.region) return false;
+    if (rule.carrier !== null && rule.carrier !== carrier) return false;
+    return true;
+  };
+  const score = (rule: ShippingFallbackRule): number =>
+    (rule.countryCode !== null ? 4 : 0) + (rule.region !== null ? 2 : 0) + (rule.carrier !== null ? 1 : 0);
+
+  const pick = (candidates: readonly ShippingFallbackRule[]): ShippingFallbackRule | null => {
+    let best: ShippingFallbackRule | null = null;
+    let bestScore = -1;
+    for (const rule of candidates) {
+      if (!geographyMatches(rule)) continue;
+      if (score(rule) > bestScore) {
+        best = rule;
+        bestScore = score(rule);
+      }
     }
-  }
-  return best;
+    return best;
+  };
+
+  // A rule written for this direction always beats one written for either.
+  return pick(rules.filter((r) => r.direction === direction)) ?? pick(rules.filter((r) => r.direction === 'any'));
 }
 
 /**
- * What the courier charged, or what our rules say it would have.
+ * What the courier charged, or what the merchant's rules say it would have.
  *
  * Expect the fallback to be the primary path: neither platform in scope exposes
  * actual courier cost to a general merchant application, so a rate card is not
  * a degraded mode here, it is the mechanism.
  *
- * An order with no shipment record yet still gets an estimate rather than a
- * zero. Shipment facts land days after the order, and treating an unshipped
- * order as costless would report every fresh order as unusually profitable.
+ * `fulfillmentMethod` gates the FALLBACK, not the sum. A settled charge on a
+ * real shipment is a fact, and discarding it because the order was labelled
+ * `self_delivery` deletes reported money — the field exists to stop the engine
+ * INVENTING a courier charge for a pickup order, which is a different thing.
  */
 export function computeShippingCost(
   order: CanonicalOrder,
@@ -79,37 +103,50 @@ export function computeShippingCost(
   direction: ShipmentDirection,
 ): Computed<ShippingLeg> {
   const diagnostics: Diagnostic[] = [];
-
-  if (order.fulfillmentMethod !== 'carrier') {
-    return { value: { costMinor: ZERO, basis: 'not_applicable' }, diagnostics };
-  }
-
   const legs = shipments.filter((s) => s.direction === direction && LIVE.has(s.status));
+  const mayEstimate = order.fulfillmentMethod === 'carrier';
 
   if (legs.length === 0) {
-    if (direction === 'return') {
-      return { value: { costMinor: ZERO, basis: 'not_applicable' }, diagnostics };
+    if (direction === 'return' || !mayEstimate) {
+      return { value: { costMinor: ZERO, basis: 'not_applicable', parcels: [] }, diagnostics };
+    }
+    // A cancelled order that never dispatched has no parcel to estimate. The
+    // fallback's justification — "shipment facts land days after the order" — is
+    // about an OPEN order, which this one will never become again.
+    if (order.lifecycle === 'cancelled' && !DISPATCHED.has(order.fulfillmentState)) {
+      return { value: { costMinor: ZERO, basis: 'not_applicable', parcels: [] }, diagnostics };
     }
     diagnostics.push(onOrder('NO_OUTBOUND_SHIPMENT'));
     const rule = matchShippingRule(rules, order, null, direction);
     if (rule === null) {
       diagnostics.push(onOrder('SHIPPING_FALLBACK_MISSING'));
-      return { value: { costMinor: ZERO, basis: 'missing' }, diagnostics };
+      return { value: { costMinor: ZERO, basis: 'missing', parcels: [] }, diagnostics };
     }
     diagnostics.push(onOrder('SHIPPING_FALLBACK_USED'));
-    return { value: { costMinor: rule.costMinor, basis: 'estimated' }, diagnostics };
+    return {
+      value: { costMinor: rule.costMinor, basis: 'estimated', parcels: [] },
+      diagnostics,
+    };
   }
 
-  const costs: Minor[] = [];
+  const parcels: ShipmentCost[] = [];
   let anyEstimated = false;
   let anyMissing = false;
 
   for (const shipment of legs) {
+    const lineIds = shipment.lines.map((l) => l.orderItemId);
+
     if (shipment.carrierCostMinor !== null) {
-      costs.push(shipment.carrierCostMinor);
+      parcels.push({ shipmentId: shipment.id, costMinor: shipment.carrierCostMinor, lineIds });
       continue;
     }
     diagnostics.push(diagnostic('CARRIER_COST_MISSING', { kind: 'shipment', shipmentId: shipment.id }));
+
+    if (!mayEstimate) {
+      // No settled charge and no licence to invent one.
+      anyMissing = true;
+      continue;
+    }
     const rule = matchShippingRule(rules, order, shipment.carrier, direction);
     if (rule === null) {
       anyMissing = true;
@@ -118,9 +155,19 @@ export function computeShippingCost(
     }
     anyEstimated = true;
     diagnostics.push(diagnostic('SHIPPING_FALLBACK_USED', { kind: 'shipment', shipmentId: shipment.id }));
-    costs.push(rule.costMinor);
+    parcels.push({ shipmentId: shipment.id, costMinor: rule.costMinor, lineIds });
   }
 
-  const basis: TermBasis = anyMissing ? 'missing' : anyEstimated ? 'estimated' : 'actual';
-  return { value: { costMinor: addMinor(...costs), basis }, diagnostics };
+  const basis: TermBasis = anyMissing
+    ? 'missing'
+    : anyEstimated
+      ? 'estimated'
+      : parcels.length === 0
+        ? 'not_applicable'
+        : 'actual';
+
+  return {
+    value: { costMinor: addMinor(...parcels.map((p) => p.costMinor)), basis, parcels },
+    diagnostics,
+  };
 }

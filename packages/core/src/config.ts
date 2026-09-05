@@ -12,6 +12,12 @@ export interface StoreProfitConfig {
   readonly currency: CurrencyCode;
   /** IANA zone. Owns the business-date boundary, and is passed explicitly so the engine never reads an ambient one. */
   readonly timezone: string;
-  /** Decides whether VAT on gateway and courier invoices is a recoverable pass-through or a real cost. */
+  /**
+   * Decides whether VAT on the fees THIS ENGINE computes — processor and COD —
+   * is a recoverable pass-through or a real cost.
+   *
+   * Courier cost is not adjusted here: it arrives already on the correct basis,
+   * per the convention stated on `CanonicalShipment.carrierCostMinor`.
+   */
   readonly vatRegistered: boolean;
 }

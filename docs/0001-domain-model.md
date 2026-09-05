@@ -1,6 +1,8 @@
 # 0001 — The canonical domain model
 
-**Status:** proposed, awaiting sign-off. Nothing downstream may be built on it until then.
+**Status:** settled. The engine was built on it — see [0002](./0002-profit-engine.md) for what
+implementing the arithmetic changed, and [0003](./0003-engine-review.md) for what an adversarial
+review of that arithmetic found.
 **Date:** 2026-09-05
 **Scope:** `packages/contracts`, `packages/ports`, `packages/schemas`, and the type surface of `packages/core`.
 
@@ -9,10 +11,10 @@
 ## What this is
 
 Phase 1, step 1: get the domain model right in isolation, before persistence, before
-ingestion, before an adapter. The profit arithmetic is deliberately **not implemented** —
-every function body in `packages/core` throws `NotImplementedError`. The types are the
-deliverable, because they are the thing that is expensive to change later: every adapter,
-the database schema, and every materialized profit row follow from them.
+ingestion, before an adapter. When this was written the profit arithmetic was deliberately not
+implemented; it is now. The types were the deliverable, because they are the thing that is
+expensive to change later: every adapter, the database schema, and every materialized profit
+row follow from them.
 
 The build, the lint suite, the boundary rules and the primitive tests all pass. What is
 being asked for is agreement on the shapes.
@@ -241,10 +243,11 @@ None of these block writing the types. All six are product calls, not engineerin
   in `packages/contracts`, where `| null` is the only optionality.
 - **The vocabulary guard fires**, including on `sallaOrderId` and `SALLA_ORDER_ID`, which the
   first word-boundary version silently ignored.
-- **49 tests pass** — 33 on the primitives, including the `1.005` case that defeats
-  `parseFloat`, the negative-zero normalization, and the full leap-year rule that `new Date()`
-  would roll over; 16 on the schemas, covering the cross-field invariants that `z.infer` erases
-  and the drift audit therefore cannot see.
+- **49 tests on the model itself** — 33 on the primitives, including the `1.005` case that
+  defeats `parseFloat`, the negative-zero normalization, and the full leap-year rule that
+  `new Date()` would roll over; 16 on the schemas, covering the cross-field invariants that
+  `z.infer` erases and the drift audit therefore cannot see. 190 across the repository since
+  the engine landed.
 - **`pnpm verify` runs on every push and pull request.**
 
 One thing learned by building rather than designing: a module-private `unique symbol` brand

@@ -1,0 +1,82 @@
+{
+  "status": "computed",
+  "orderId": "demo:1:1001",
+  "storeId": "demo:1",
+  "currency": "SAR",
+  "businessDate": "2026-03-01",
+  "calcVersion": 2,
+  "feeRuleSetId": "frs_2026_01",
+  "recognition": {
+    "kind": "recognized"
+  },
+  "totals": {
+    "itemsRevenueExVatMinor": 5000,
+    "shippingRevenueExVatMinor": 0,
+    "codFeeRevenueExVatMinor": 0,
+    "orderDiscountExVatMinor": 0,
+    "revenueExVatMinor": 5000,
+    "vatCollectedMinor": 750,
+    "cogsMinor": 2000,
+    "outboundShippingCostMinor": 1500,
+    "returnShippingCostMinor": 0,
+    "gatewayFeeExVatMinor": 174,
+    "gatewayFeeVatMinor": 26,
+    "gatewayFeeCostMinor": 174,
+    "codCostExVatMinor": 0,
+    "codCostVatMinor": 0,
+    "codCostMinor": 0,
+    "reversedRevenueExVatMinor": 0,
+    "restockedCogsMinor": 0,
+    "reversalImpactMinor": 0,
+    "contributionMarginMinor": 1326,
+    "marginBps": 2652,
+    "costCoveredRevenueExVatMinor": 5000
+  },
+  "lines": [
+    {
+      "orderItemId": "demo:1:1001#L1",
+      "platformProductId": "P1",
+      "platformVariantId": null,
+      "sku": "SKU-1",
+      "quantity": 1,
+      "allocatedOrderDiscountExVatMinor": 0,
+      "netRevenueExVatMinor": 5000,
+      "allocatedShippingRevenueExVatMinor": 0,
+      "allocatedCodFeeRevenueExVatMinor": 0,
+      "unitCostMinor": 2000,
+      "cogsMinor": 2000,
+      "costSource": "merchant_manual",
+      "costHistoryId": "ch_1",
+      "allocatedOutboundShippingMinor": 1500,
+      "allocatedReturnShippingMinor": 0,
+      "allocatedGatewayFeeMinor": 174,
+      "allocatedCodCostMinor": 0,
+      "reversedQuantity": 0,
+      "reversedRevenueExVatMinor": 0,
+      "restockedCogsMinor": 0,
+      "reversalImpactMinor": 0,
+      "contributionMarginMinor": 1326,
+      "costCoveredRevenueExVatMinor": 5000
+    }
+  ],
+  "confidence": {
+    "revenue": "reported",
+    "cogs": "actual",
+    "outboundShipping": "actual",
+    "returnShipping": "not_applicable",
+    "gatewayFee": "estimated",
+    "codCost": "not_applicable",
+    "reversal": "not_applicable",
+    "level": "estimated"
+  },
+  "diagnostics": [
+    {
+      "code": "FEE_RULE_DEFAULT_USED",
+      "severity": "warning",
+      "subject": {
+        "kind": "payment",
+        "index": 0
+      }
+    }
+  ]
+}

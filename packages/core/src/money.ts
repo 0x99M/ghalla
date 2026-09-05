@@ -53,8 +53,10 @@ export function negateMinor(value: Minor): Minor {
  * the property that lets a reversal undo a charge exactly.
  */
 function divRoundHalfAwayFromZero(numerator: number, denominator: number): number {
-  if (denominator <= 0) {
-    throw new MoneyKernelError(`Denominator must be positive; received ${String(denominator)}.`);
+  // `NaN <= 0` is false, so a bare `<= 0` lets the worst possible divisor past
+  // the one check that exists for it.
+  if (!Number.isSafeInteger(denominator) || denominator <= 0) {
+    throw new MoneyKernelError(`Divisor must be a positive integer; received ${String(denominator)}.`);
   }
   if (!Number.isSafeInteger(numerator)) {
     throw new MoneyKernelError(
@@ -78,11 +80,26 @@ function divRoundHalfAwayFromZero(numerator: number, denominator: number): numbe
  * loudly rather than silently.
  */
 export function mulBps(value: Minor, bps: Bps): Minor {
+  // The product guard below cannot catch a fractional rate: `value * 2.75` lands
+  // on an integer for roughly half of all baskets, so a merchant who typed their
+  // 2.75% as `2.75` would get a silently 100x-wrong fee on those orders and a
+  // dead-letter on the rest, partitioned by the parity of the basket amount.
+  if (!Number.isSafeInteger(bps)) {
+    throw new MoneyKernelError(
+      `A rate must be an integer count of basis points; received ${String(bps)}. ` +
+        `2.75% is 275, not 2.75.`,
+    );
+  }
   return toMinor(divRoundHalfAwayFromZero(value * bps, 10_000));
 }
 
 /** `null` on either side means unbounded there. The cap wins if a caller supplies min > max. */
 export function clampMinor(value: Minor, min: Minor | null, max: Minor | null): Minor {
+  // A NaN bound makes both comparisons false and removes the clamp entirely,
+  // which is the opposite of what a bound is for.
+  if ((min !== null && !Number.isFinite(min)) || (max !== null && !Number.isFinite(max))) {
+    throw new MoneyKernelError(`Fee bounds must be finite; received min=${String(min)} max=${String(max)}.`);
+  }
   let out: number = value;
   if (min !== null && out < min) out = min;
   if (max !== null && out > max) out = max;
@@ -192,6 +209,15 @@ export function allocateMinor(
     out.set(row.key, toMinor(negative ? -Number(amount) : Number(amount)));
   }
   return out;
+}
+
+/**
+ * `numerator / denominator`, rounded half away from zero. Exported so
+ * `marginBpsOf` uses the same rounding as the money it describes rather than a
+ * hand-rolled copy that has already drifted once.
+ */
+export function divRoundHalfAway(numerator: number, denominator: number): number {
+  return divRoundHalfAwayFromZero(numerator, denominator);
 }
 
 /** Guards a value that arithmetic produced rather than a constructor. */

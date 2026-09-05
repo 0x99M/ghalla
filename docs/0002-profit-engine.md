@@ -1,6 +1,7 @@
 # 0002 — The profit engine
 
-**Status:** implemented. 11 golden fixtures, 103 tests, `pnpm verify` green.
+**Status:** implemented; corrected by [0003](./0003-engine-review.md), which is the current
+state. 23 golden fixtures, 190 tests, `pnpm verify` green. `CALC_VERSION` is 2.
 **Date:** 2026-09-05
 **Follows:** [0001 — the canonical domain model](./0001-domain-model.md)
 
@@ -16,8 +17,10 @@ onboarding; offer a per-region rate card later, from the shipping-cost drill-dow
 merchant is already looking at the number.
 
 *In the code:* `ShippingFallbackRule` with every key `null` is a legitimate catch-all row, and
-`matchShippingRule` scores specificity so a later per-region row simply outranks it. No type
-change is needed to move from one to the other — the fixtures use the blended form.
+`matchShippingRule` scores geographic specificity so a later per-region row outranks it. Direction
+is a filter rather than a score — a rule written for returns always beats one written for either,
+which is what makes the upgrade path work for RTO rates too. No type change is needed to move
+from one to the other; the fixtures use the blended form.
 
 **2. An unknowable card scheme behind a wallet.** Assume the more expensive scheme, mark the
 term estimated, and never flag a loss-maker on a fee-driven margin.
@@ -54,8 +57,10 @@ a lawyer's five minutes on whether PDPL permits retaining even a salted hash; th
 
 **6. Merchants below the VAT registration threshold.** Yes, they are in scope.
 
-*In the code:* `StoreProfitConfig.vatRegistered` decides whether the VAT on processor and courier
-invoices is a recoverable pass-through or a real cost. Fixture `0008` is an unregistered merchant:
+*In the code:* `StoreProfitConfig.vatRegistered` decides whether the VAT on the fees this engine
+computes — processor and COD — is a recoverable pass-through or a real cost. Courier cost is not
+adjusted here; it arrives already on the correct basis, per the convention on
+`CanonicalShipment.carrierCostMinor`. Fixture `0008` is an unregistered merchant:
 the same order carries SAR 1.02 more cost than it would for a registered one, on a fee of SAR 6.78.
 
 ---
@@ -123,7 +128,8 @@ Five functions every merchant-visible number passes through.
 
 - **`mulBps`** rounds half **away from zero**, not `Math.round`'s half-up. `Math.round(-1.5)` is
   `-1`, so a charge and its exact reversal would differ by one halala and every refunded order
-  would leave a residue. Tested antisymmetric across ~1,400 value/rate pairs.
+  would leave a residue. Tested antisymmetric over 1,429 values across six rates — 8,574 pairs —
+  and independently against exact BigInt arithmetic over 1.27M pairs during review.
 - **`splitVatInclusive`** returns VAT as the **residual**, so `net + vat === gross` by
   construction rather than by luck. Tested over 3,000 consecutive gross amounts.
 - **`allocateMinor`** is largest-remainder with BigInt intermediates. Naive
@@ -132,7 +138,8 @@ Five functions every merchant-visible number passes through.
   flag, which is a headline feature. Ties break on remainder, then weight, then key — never array
   index, so re-ingesting an order whose lines arrive in a different order yields identical
   per-SKU numbers. Tested across 400 generated shapes plus the specific 7-halala-over-10-lines
-  case; when every weight is zero (the 100%-discount order) it splits evenly and still ties.
+  case; when every weight is zero it splits evenly and still ties. (That branch is reached by a
+  cost-only order, not by the 100%-discount one — its lines keep their gross value.)
 - **`MAX_MINOR`** is exactly `floor(MAX_SAFE_INTEGER / 10_000)`, chosen so the intermediate in
   `value × bps` stays exact. Exceeding it throws rather than degrading silently.
 - **`toMinor`** normalizes negative zero, because `JSON.stringify(-0)` is `"0"` while
@@ -147,14 +154,16 @@ and `0005`.
 The expectations are generated (`UPDATE_GOLDEN=1 pnpm --filter @ghalla/core test`) and then
 hand-checked. A regenerated expectation can only ever agree with the implementation, so the
 runner **also** asserts, independently of the recorded files, what must be true of any
-implementation: the revenue identity, the margin identity, the VAT-recovery identity, the exact
-`Σ(lines) === totals` ties on seven separate terms, per-line margin reconstruction, safe-integer
-and no-negative-zero on every money field, `level` as a pure projection of the terms,
+implementation: the revenue identity, the margin identity, the VAT-recovery identity, eight
+`Σ(lines) === totals` ties — two of which are satisfied by construction, since those totals are
+built by summing the lines — per-line margin reconstruction, `restockedCogs <= cogs`,
+safe-integer and no-negative-zero on every money field, `level` as a projection of the terms,
 determinism, and invariance to the order items and shipments arrive in.
 
-`CALC_VERSION` stays at `1`: this is the first implementation, so no stored row's arithmetic
-changed. `scripts/check-calc-version.sh` fails CI when an existing expectation is **modified**
-without a bump — adding a fixture is not a change to any calculation already in the database.
+`CALC_VERSION` is `2`. It was `1` for the first implementation; the corrections in
+[0003](./0003-engine-review.md) changed the arithmetic, so every stored row from version 1 must
+be recomputed. `scripts/check-calc-version.sh` fails CI when an existing expectation is
+**modified** and the constant does not **rise** — it reads the value, not the file name.
 
 ## What comes next
 

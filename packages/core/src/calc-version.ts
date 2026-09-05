@@ -14,9 +14,24 @@ import type { CalcVersion } from '@ghalla/contracts';
  * bump it for a comment, a rename, or a new diagnostic that fires on no
  * existing data.
  *
- * CI fails the build if any golden fixture's expected output changed and this
- * did not. Without that check the failure is silent: someone changes a rounding
- * mode, regenerates the fixtures, and the database now holds two different
- * calculations under one version with no way to tell them apart.
+ * `scripts/check-calc-version.sh` fails the build when an existing golden
+ * expectation is MODIFIED and this constant does not RISE — it reads the value,
+ * not the file name, because a commit that merely reworded a comment here used
+ * to satisfy a guard that only checked whether the file had been touched.
+ * Adding a new fixture is not a change to any calculation already stored.
+ *
+ * Without that check the failure is silent: someone changes a rounding mode,
+ * regenerates the fixtures, and the database holds two different calculations
+ * under one version with no way to tell them apart.
  */
-export const CALC_VERSION: CalcVersion = toCalcVersion(1);
+export const CALC_VERSION: CalcVersion = toCalcVersion(2);
+
+/*
+ * 2 — reversal COGS credit prorated and capped per line; per-line allocation
+ *     weighted on item value rather than recognized revenue; freight attributed
+ *     per parcel; return shipping attributed to returned lines; recognition
+ *     extended to authorized / voided / failed / lost; gateway candidate
+ *     selection fixed; COD priced per live carrier. Every stored row from
+ *     version 1 must be recomputed.
+ * 1 — first implementation.
+ */

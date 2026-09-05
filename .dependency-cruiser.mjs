@@ -1,5 +1,5 @@
 /**
- * Boundary layer L5 — the graph check.
+ * Boundary layer L4 — the graph check.
  *
  * Catches what `no-restricted-imports` structurally cannot: dynamic `import()`,
  * and transitive reach. Runs in CI at severity "error" (non-zero exit).

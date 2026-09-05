@@ -4,7 +4,7 @@
   "storeId": "demo:1",
   "currency": "SAR",
   "businessDate": "2026-03-02",
-  "calcVersion": 1,
+  "calcVersion": 2,
   "feeRuleSetId": "frs_2026_01",
   "recognition": {
     "kind": "recognized"

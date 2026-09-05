@@ -3,8 +3,7 @@
     "storeId": "demo:1",
     "currency": "SAR",
     "timezone": "Asia/Riyadh",
-    "vatRegistered": false,
-    "vatRateBps": 0
+    "vatRegistered": false
   },
   "order": {
     "id": "demo:1:1001",
@@ -58,7 +57,7 @@
       "platformProductId": "P1",
       "platformVariantId": null,
       "sku": "SKU-1",
-      "productName": "منتج 1",
+      "productName": "\u0645\u0646\u062a\u062c 1",
       "quantity": 1,
       "unitPriceExVatMinor": 20000,
       "grossLineExVatMinor": 20000,

@@ -16,7 +16,7 @@ handling, payment gateway fees, and returns/RTO.
 Each platform integration deploys as its own service with its own database. They share
 **code**, not infrastructure. The core is a library, not a service.
 
-This is enforced mechanically, at three layers, and it is [verified by planting deliberate
+This is enforced mechanically, at four layers, and it is [verified by planting deliberate
 violations](./docs/0001-domain-model.md#what-was-verified-not-assumed) rather than assumed:
 
 | Layer | Mechanism | Catches |
@@ -26,9 +26,9 @@ violations](./docs/0001-domain-model.md#what-was-verified-not-assumed) rather th
 | **L3** | ESLint `no-restricted-imports` + `no-restricted-syntax` | forbidden SDKs and type-only imports, the relative-path route into a *referenced* package, and purity leaks no import rule can see — `new Date`, `Math.random`, `parseFloat`, `globalThis`, aliasing, dynamic `import()` |
 | **L4** | dependency-cruiser | transitive reach, undeclared dependencies, and the raw payload reaching anything but the adapter boundary |
 
-There were four. `eslint-plugin-boundaries` was the fourth and it was removed, because an
+There was a fifth. `eslint-plugin-boundaries` sat where L3 is now, and it was removed because an
 adversarial review established that it reported nothing at all under its shipped configuration
-while the README credited it — and arming it correctly needed a module resolver plus three
+while this table credited it — and arming it correctly needed a module resolver plus three
 coordinated option changes to catch only what the other layers already caught. A credited but
 silent enforcement layer is worse than an absent one.
 
@@ -56,14 +56,18 @@ tooling/
 
 **Phase 1, step 1 complete — the domain model and the profit engine.**
 
-`computeOrderProfit` is implemented and pure: no I/O, no clock, no randomness. 11 golden
-fixtures, 103 tests, `pnpm verify` green.
+`computeOrderProfit` is implemented, pure and total: no I/O, no clock, no randomness, and it
+never throws — for any input, including `null`. 23 golden fixtures, 190 tests, `pnpm verify`
+green.
 
 - **[docs/0001-domain-model.md](./docs/0001-domain-model.md)** — the seven decisions that
   shape the canonical types, every deviation from the original brief with its justification.
 - **[docs/0002-profit-engine.md](./docs/0002-profit-engine.md)** — the six product questions
   now decided, what implementing the arithmetic changed about the model, and how the fixtures
   are checked independently of the implementation that produced them.
+
+- **[docs/0003-engine-review.md](./docs/0003-engine-review.md)** — what an adversarial review of
+  the arithmetic found, and what changed as a result.
 
 Next: `persistence`, then `ingestion` against a fake adapter, then the first real platform.
 

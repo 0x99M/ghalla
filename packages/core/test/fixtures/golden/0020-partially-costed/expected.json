@@ -1,0 +1,140 @@
+{
+  "status": "computed",
+  "orderId": "demo:1:1001",
+  "storeId": "demo:1",
+  "currency": "SAR",
+  "businessDate": "2026-03-01",
+  "calcVersion": 2,
+  "feeRuleSetId": "frs_2026_01",
+  "recognition": {
+    "kind": "recognized"
+  },
+  "totals": {
+    "itemsRevenueExVatMinor": 30000,
+    "shippingRevenueExVatMinor": 0,
+    "codFeeRevenueExVatMinor": 0,
+    "orderDiscountExVatMinor": 0,
+    "revenueExVatMinor": 30000,
+    "vatCollectedMinor": 4500,
+    "cogsMinor": 8500,
+    "outboundShippingCostMinor": 2000,
+    "returnShippingCostMinor": 0,
+    "gatewayFeeExVatMinor": 345,
+    "gatewayFeeVatMinor": 52,
+    "gatewayFeeCostMinor": 345,
+    "codCostExVatMinor": 0,
+    "codCostVatMinor": 0,
+    "codCostMinor": 0,
+    "reversedRevenueExVatMinor": 0,
+    "restockedCogsMinor": 0,
+    "reversalImpactMinor": 0,
+    "contributionMarginMinor": 19155,
+    "marginBps": 6385,
+    "costCoveredRevenueExVatMinor": 10000
+  },
+  "lines": [
+    {
+      "orderItemId": "demo:1:1001#L1",
+      "platformProductId": "P1",
+      "platformVariantId": null,
+      "sku": "SKU-1",
+      "quantity": 1,
+      "allocatedOrderDiscountExVatMinor": 0,
+      "netRevenueExVatMinor": 10000,
+      "allocatedShippingRevenueExVatMinor": 0,
+      "allocatedCodFeeRevenueExVatMinor": 0,
+      "unitCostMinor": 4000,
+      "cogsMinor": 4000,
+      "costSource": "merchant_manual",
+      "costHistoryId": "ch_1",
+      "allocatedOutboundShippingMinor": 667,
+      "allocatedReturnShippingMinor": 0,
+      "allocatedGatewayFeeMinor": 115,
+      "allocatedCodCostMinor": 0,
+      "reversedQuantity": 0,
+      "reversedRevenueExVatMinor": 0,
+      "restockedCogsMinor": 0,
+      "reversalImpactMinor": 0,
+      "contributionMarginMinor": 5218,
+      "costCoveredRevenueExVatMinor": 10000
+    },
+    {
+      "orderItemId": "demo:1:1001#L2",
+      "platformProductId": "P2",
+      "platformVariantId": null,
+      "sku": "SKU-2",
+      "quantity": 1,
+      "allocatedOrderDiscountExVatMinor": 0,
+      "netRevenueExVatMinor": 10000,
+      "allocatedShippingRevenueExVatMinor": 0,
+      "allocatedCodFeeRevenueExVatMinor": 0,
+      "unitCostMinor": 4500,
+      "cogsMinor": 4500,
+      "costSource": "category_default",
+      "costHistoryId": "ch_cat",
+      "allocatedOutboundShippingMinor": 667,
+      "allocatedReturnShippingMinor": 0,
+      "allocatedGatewayFeeMinor": 115,
+      "allocatedCodCostMinor": 0,
+      "reversedQuantity": 0,
+      "reversedRevenueExVatMinor": 0,
+      "restockedCogsMinor": 0,
+      "reversalImpactMinor": 0,
+      "contributionMarginMinor": 4718,
+      "costCoveredRevenueExVatMinor": 0
+    },
+    {
+      "orderItemId": "demo:1:1001#L3",
+      "platformProductId": "P3",
+      "platformVariantId": null,
+      "sku": "SKU-3",
+      "quantity": 1,
+      "allocatedOrderDiscountExVatMinor": 0,
+      "netRevenueExVatMinor": 10000,
+      "allocatedShippingRevenueExVatMinor": 0,
+      "allocatedCodFeeRevenueExVatMinor": 0,
+      "unitCostMinor": 0,
+      "cogsMinor": 0,
+      "costSource": "none",
+      "costHistoryId": null,
+      "allocatedOutboundShippingMinor": 666,
+      "allocatedReturnShippingMinor": 0,
+      "allocatedGatewayFeeMinor": 115,
+      "allocatedCodCostMinor": 0,
+      "reversedQuantity": 0,
+      "reversedRevenueExVatMinor": 0,
+      "restockedCogsMinor": 0,
+      "reversalImpactMinor": 0,
+      "contributionMarginMinor": 9219,
+      "costCoveredRevenueExVatMinor": 0
+    }
+  ],
+  "confidence": {
+    "revenue": "reported",
+    "cogs": "missing",
+    "outboundShipping": "actual",
+    "returnShipping": "not_applicable",
+    "gatewayFee": "estimated",
+    "codCost": "not_applicable",
+    "reversal": "not_applicable",
+    "level": "incomplete"
+  },
+  "diagnostics": [
+    {
+      "code": "COST_ESTIMATED",
+      "severity": "warning",
+      "subject": {
+        "kind": "line",
+        "orderItemId": "demo:1:1001#L2"
+      }
+    },
+    {
+      "code": "COST_MISSING",
+      "severity": "warning",
+      "subject": {
+        "kind": "line",
+        "orderItemId": "demo:1:1001#L3"
+      }
+    }
+  ]
+}

@@ -105,9 +105,14 @@ export type ShipmentStatus = (typeof SHIPMENT_STATUSES)[number];
 // ------------------------------------------------------------ reversals ----
 
 /**
- * A void never settled, so its gateway fee was never incurred and must not be
- * treated as sunk. A chargeback is strictly worse than a refund. Collapsing the
- * three loses money in both directions.
+ * A void never settled and a chargeback carries a penalty a refund does not.
+ *
+ * Honest scope note: the profit engine does not yet branch on `kind`. The void
+ * case is already handled by a different mechanism — a fee accrues only on a
+ * leg in state `captured`, so an authorized-then-voided order accrues none. The
+ * chargeback penalty has no home yet; representing it as a reversal amount
+ * would report it to the merchant as refunded REVENUE, which is worse than
+ * omitting it. `kind` is audit-only until a penalty term exists.
  */
 export const REVERSAL_KINDS = ['refund', 'void', 'chargeback'] as const;
 export type ReversalKind = (typeof REVERSAL_KINDS)[number];

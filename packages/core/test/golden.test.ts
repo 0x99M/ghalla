@@ -106,6 +106,11 @@ describe('golden fixtures', () => {
     );
     expect(t.reversalImpactMinor).toBe(t.restockedCogsMinor - t.reversedRevenueExVatMinor);
 
+    // You cannot get back more goods than you shipped. Without this, a reversal
+    // with no line detail credited the WHOLE order's COGS regardless of how
+    // little was refunded, and a refund could raise profit.
+    expect(t.restockedCogsMinor).toBeLessThanOrEqual(t.cogsMinor);
+
     if (result.lines.length > 0) {
       // The tie that matters most: if order profit and the sum of its SKU
       // profits disagree by a halala, every other number on the page is in
@@ -119,7 +124,17 @@ describe('golden fixtures', () => {
       expect(sum(result.lines.map((l) => l.reversalImpactMinor))).toBe(t.reversalImpactMinor);
       expect(sum(result.lines.map((l) => l.costCoveredRevenueExVatMinor))).toBe(t.costCoveredRevenueExVatMinor);
 
+      // The REVENUE side of the tie. Shipping and COD-fee revenue were the only
+      // order-level terms with no assertion, which is exactly where the engine
+      // silently disagreed with itself by the value of a free-shipping coupon.
+      expect(
+        sum(result.lines.map((l) => l.netRevenueExVatMinor)) +
+          sum(result.lines.map((l) => l.allocatedShippingRevenueExVatMinor)) +
+          sum(result.lines.map((l) => l.allocatedCodFeeRevenueExVatMinor)),
+      ).toBe(t.revenueExVatMinor);
+
       for (const line of result.lines) {
+        expect(line.restockedCogsMinor).toBeLessThanOrEqual(line.cogsMinor);
         expect(line.contributionMarginMinor).toBe(
           line.netRevenueExVatMinor +
             line.allocatedShippingRevenueExVatMinor +

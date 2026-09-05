@@ -2,7 +2,7 @@
   "status": "rejected",
   "orderId": "demo:1:1001",
   "storeId": "demo:1",
-  "calcVersion": 1,
+  "calcVersion": 2,
   "diagnostics": [
     {
       "code": "CURRENCY_MISMATCH",

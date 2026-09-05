@@ -27,7 +27,14 @@ export type ProfitRecognition =
   | { readonly kind: 'recognized' }
   | {
       readonly kind: 'cost_only';
-      readonly reason: 'rto_uncollected' | 'cancelled_after_dispatch' | 'cancelled_after_capture';
+      readonly reason:
+        | 'rto_uncollected'
+        | 'cancelled_after_dispatch'
+        | 'cancelled_after_capture'
+        /** Voided or declined outside a cancellation: platforms leave these `open`. */
+        | 'payment_not_settled'
+        /** Every live outbound leg is lost. Terminal — the cash will never arrive. */
+        | 'goods_lost';
     }
   | {
       readonly kind: 'excluded';

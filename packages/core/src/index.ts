@@ -36,12 +36,13 @@ export type {
 export type { OrderProfitInput } from './input.js';
 
 export type { ComputeOrderProfit } from './compute-order-profit.js';
-export { computeOrderProfit } from './compute-order-profit.js';
+export { computeOrderProfit, isRankableForLossMaker } from './compute-order-profit.js';
 
 export type { AllocationBucket } from './money.js';
 export {
   MoneyKernelError,
   addMinor,
+  divRoundHalfAway,
   allocateMinor,
   clampMinor,
   mulBps,
@@ -50,4 +51,4 @@ export {
   subMinor,
 } from './money.js';
 
-export { businessDateOf } from './engine/business-date.js';
+export { InvalidTimezoneError, MalformedInstantError, businessDateOf } from './engine/business-date.js';

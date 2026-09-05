@@ -1,14 +1,14 @@
 import { toBps, toMinor } from '@ghalla/contracts';
-import type { Bps, Minor, OrderItemId } from '@ghalla/contracts';
+import type { Bps, Minor, OrderId, OrderItemId, StoreId } from '@ghalla/contracts';
 import { CALC_VERSION } from './calc-version.js';
-import type { Diagnostic } from './diagnostics.js';
+import type { Diagnostic, DiagnosticCode } from './diagnostics.js';
 import type { OrderProfitInput } from './input.js';
 import type { OrderProfitLine, OrderProfitResult, OrderProfitTotals } from './result.js';
-import { addMinor, subMinor } from './money.js';
+import { addMinor, divRoundHalfAway, subMinor } from './money.js';
 import { onOrder, sortDiagnostics } from './engine/diagnostics-builder.js';
 import { normalizeAndValidate } from './engine/normalize.js';
-import { computeRecognition } from './engine/recognition.js';
-import { computeRevenue, targetedDiscounts } from './engine/revenue.js';
+import { DISPATCHED, computeRecognition } from './engine/recognition.js';
+import { computeRevenue } from './engine/revenue.js';
 import { computeCogs } from './engine/cogs.js';
 import { computeShippingCost } from './engine/shipping.js';
 import { computeGatewayFees } from './engine/gateway.js';
@@ -16,7 +16,7 @@ import { computeCodCost } from './engine/cod.js';
 import { computeReversalImpact } from './engine/reversal.js';
 import { allocateOrderCostsToLines } from './engine/allocate-lines.js';
 import { deriveConfidence } from './engine/confidence.js';
-import { InvalidTimezoneError, businessDateOf } from './engine/business-date.js';
+import { InvalidTimezoneError, MalformedInstantError, businessDateOf } from './engine/business-date.js';
 
 const ZERO = toMinor(0);
 
@@ -31,14 +31,15 @@ const ZERO = toMinor(0);
  * twice with the same input it returns the same result — forever, for a given
  * `CALC_VERSION`.
  *
- * **Total.** It never throws, for any input. The argument is not aesthetic:
- * webhooks are queued and ingestion owns retry, so a throw is indistinguishable
- * from a transient failure. A permanently uncosted SKU would become a
- * deterministic retry storm that also delays healthy jobs, and the order would
- * vanish from the merchant's dashboard entirely — strictly worse than a flagged
- * estimate. Defects that indicate a *caller* bug return `status: 'rejected'`
- * instead, which is a machine-readable dead-letter signal and, unlike an
- * exception, snapshot-testable in a golden fixture.
+ * **Total.** It never throws, for any input — including `null`, a missing
+ * `order`, or money fields that arrive as strings. The argument is not
+ * aesthetic: webhooks are queued and ingestion owns retry, so a throw is
+ * indistinguishable from a transient failure. A permanently uncosted SKU would
+ * become a deterministic retry storm that also delays healthy jobs, and the
+ * order would vanish from the merchant's dashboard entirely — strictly worse
+ * than a flagged estimate. Defects that indicate a *caller* bug return
+ * `status: 'rejected'` instead, which is a machine-readable dead-letter signal
+ * and, unlike an exception, snapshot-testable in a golden fixture.
  *
  * ## The formula
  *
@@ -61,8 +62,9 @@ const ZERO = toMinor(0);
  * ```
  *
  * VAT is excluded from revenue entirely — it is the government's money passing
- * through. It is NOT excluded from the cost side for a merchant who is not
- * VAT-registered, because they cannot reclaim it.
+ * through. On the cost side it is excluded only for a VAT-registered merchant,
+ * and only from the fees this engine computes: courier cost arrives already on
+ * the correct basis (see `CanonicalShipment.carrierCostMinor`).
  *
  * ## Invariants, asserted by every golden fixture
  *
@@ -72,6 +74,7 @@ const ZERO = toMinor(0);
  *                        − gatewayFee − codCost + reversalImpact
  * Σ(lines.contributionMarginMinor) === totals.contributionMarginMinor   EXACTLY
  * Σ(lines.cogsMinor)               === totals.cogsMinor                 EXACTLY
+ * restockedCogsMinor <= cogsMinor    (you cannot get back more than you shipped)
  * Number.isSafeInteger(x) for every money field
  * ```
  *
@@ -80,30 +83,39 @@ const ZERO = toMinor(0);
  * `ORDER_HAS_NO_ITEMS`; there is nothing to tie to.
  */
 export function computeOrderProfit(input: Readonly<OrderProfitInput>): OrderProfitResult {
+  // Read BEFORE the try. The reject builder used to dereference these, so seven
+  // malformed inputs escaped as an uncaught TypeError out of the very handler
+  // that exists to guarantee they cannot.
+  const orderId = (input?.order?.id ?? '') as OrderId;
+  const storeId = (input?.store?.storeId ?? '') as StoreId;
+
+  const reject = (code: DiagnosticCode): OrderProfitResult => ({
+    status: 'rejected',
+    orderId,
+    storeId,
+    calcVersion: CALC_VERSION,
+    diagnostics: [onOrder(code)],
+  });
+
   try {
-    return compute(input);
+    return compute(input, orderId, storeId);
   } catch (error) {
-    // Totality is a promise, so it cannot depend on every internal invariant
+    // Totality is a promise, so it cannot rest on every internal invariant
     // holding. A bug here is dead-lettered as a rejected result rather than
     // thrown into a queue that would retry it forever.
-    const code = error instanceof InvalidTimezoneError ? 'INVALID_TIMEZONE' : 'INTERNAL_INVARIANT_VIOLATED';
-    return {
-      status: 'rejected',
-      orderId: input.order.id,
-      storeId: input.store.storeId,
-      calcVersion: CALC_VERSION,
-      diagnostics: [onOrder(code)],
-    };
+    if (error instanceof MalformedInstantError) return reject('MALFORMED_TIMESTAMP');
+    if (error instanceof InvalidTimezoneError) return reject('INVALID_TIMEZONE');
+    return reject('INTERNAL_INVARIANT_VIOLATED');
   }
 }
 
-function compute(input: Readonly<OrderProfitInput>): OrderProfitResult {
+function compute(input: Readonly<OrderProfitInput>, orderId: OrderId, storeId: StoreId): OrderProfitResult {
   const { normalized, diagnostics: fatal } = normalizeAndValidate(input);
   if (normalized === null) {
     return {
       status: 'rejected',
-      orderId: input.order.id,
-      storeId: input.store.storeId,
+      orderId,
+      storeId,
       calcVersion: CALC_VERSION,
       diagnostics: sortDiagnostics(fatal),
     };
@@ -113,7 +125,7 @@ function compute(input: Readonly<OrderProfitInput>): OrderProfitResult {
   const { store, feeRuleSet } = input;
   const diagnostics: Diagnostic[] = [];
 
-  const recognition = computeRecognition(order);
+  const recognition = computeRecognition(order, shipments);
   const businessDate = businessDateOf(order.placedAt, store.timezone);
 
   const revenue = computeRevenue(order, items, recognition);
@@ -135,18 +147,23 @@ function compute(input: Readonly<OrderProfitInput>): OrderProfitResult {
   diagnostics.push(...cod.diagnostics);
 
   const quantities = new Map<OrderItemId, number>(items.map((i) => [i.id, i.quantity]));
+  // Weights come from the ITEMS, so they survive a cost_only order zeroing
+  // recognized revenue — otherwise every order-level cost splits evenly and a
+  // cheap accessory carries the same courier charge as an expensive item.
+  const weights = new Map<OrderItemId, Minor>(items.map((i) => [i.id, i.lineTotalExVatMinor]));
   const reversal = computeReversalImpact(
     reversals,
     revenue.value.lines,
     cogs.value.lines,
     quantities,
+    weights,
     recognition,
     shipments,
+    DISPATCHED.has(order.fulfillmentState),
   );
   diagnostics.push(...reversal.diagnostics);
 
   const excluded = recognition.kind === 'excluded';
-  const targeted = targetedDiscounts(order);
 
   // For an excluded order nothing is recognized at all, not even the costs.
   const outboundCost = excluded ? ZERO : outbound.value.costMinor;
@@ -159,10 +176,20 @@ function compute(input: Readonly<OrderProfitInput>): OrderProfitResult {
     ? []
     : allocateOrderCostsToLines(items, revenue.value.lines, cogs.value.lines, reversal.value.lines, {
         // Discounts targeting shipping or the COD fee reduce those terms rather
-        // than item revenue, so they are netted off here and not allocated to
-        // lines as item discounts.
-        shippingRevenueExVatMinor: subMinor(revenue.value.shippingRevenueExVatMinor, targeted.shipping),
-        codFeeRevenueExVatMinor: subMinor(revenue.value.codFeeRevenueExVatMinor, targeted.codFee),
+        // than item revenue. They come from computeRevenue, which has already
+        // zeroed them on a non-recognized order — reading order.discounts again
+        // here was a second source of truth, and it broke the per-line tie by
+        // exactly the discount on any cost_only order with a free-shipping coupon.
+        shippingRevenueExVatMinor: subMinor(
+          revenue.value.shippingRevenueExVatMinor,
+          revenue.value.shippingDiscountExVatMinor,
+        ),
+        codFeeRevenueExVatMinor: subMinor(
+          revenue.value.codFeeRevenueExVatMinor,
+          revenue.value.codFeeDiscountExVatMinor,
+        ),
+        outboundParcels: outbound.value.parcels,
+        returnParcels: returned.value.parcels,
         outboundShippingCostMinor: outboundCost,
         returnShippingCostMinor: returnCost,
         gatewayFeeCostMinor: gatewayCost,
@@ -211,19 +238,19 @@ function compute(input: Readonly<OrderProfitInput>): OrderProfitResult {
           ? 'not_applicable'
           : cogs.value.anyMissing
             ? 'missing'
-            : cogs.value.anyEstimated
+            : // A COGS credit inferred from a shipment status rather than
+              // reported is a guess, however well-founded, so such an order can
+              // never be `exact`. There is no condition signal on a return leg.
+              cogs.value.anyEstimated || reversal.value.inferredRestock
               ? 'estimated'
               : 'actual',
       outboundShipping: excluded ? 'not_applicable' : outbound.value.basis,
       returnShipping: excluded ? 'not_applicable' : returned.value.basis,
       gatewayFee: excluded ? 'not_applicable' : gateway.value.basis,
       codCost: excluded ? 'not_applicable' : cod.value.basis,
-      reversal:
-        reversals.length === 0 && reversal.value.impactMinor === 0
-          ? 'not_applicable'
-          : reversal.value.allocated
-            ? 'allocated'
-            : 'reported',
+      // An RTO has no reversal record at all — the evidence is a shipment — so
+      // it stays `not_applicable` rather than claiming a platform reported one.
+      reversal: reversals.length === 0 ? 'not_applicable' : reversal.value.allocated ? 'allocated' : 'reported',
     },
     diagnostics,
   );
@@ -244,17 +271,31 @@ function compute(input: Readonly<OrderProfitInput>): OrderProfitResult {
   };
 }
 
-/** `null` rather than zero when there is no revenue: a ratio to nothing is nothing, not 0%. */
+/**
+ * `null` rather than zero when there is no revenue: a ratio to nothing is
+ * nothing, not 0%. Uses the kernel's rounding, so the rate rounds the same way
+ * as the money it describes rather than through a hand-rolled copy.
+ */
 function marginBpsOf(margin: Minor, revenue: Minor): Bps | null {
   if (revenue <= 0) return null;
-  const scaled = margin * 10_000;
-  if (!Number.isSafeInteger(scaled)) return null;
-  const negative = scaled < 0;
-  const abs = negative ? -scaled : scaled;
-  const whole = Math.floor(abs / revenue);
-  const rounded = (abs - whole * revenue) * 2 >= revenue ? whole + 1 : whole;
-  return toBps(negative ? -rounded : rounded);
+  return toBps(divRoundHalfAway(margin * 10_000, revenue));
 }
 
 /** The signature as a first-class type, so a fake or a decorated variant is checkable against it. */
 export type ComputeOrderProfit = (input: Readonly<OrderProfitInput>) => OrderProfitResult;
+
+/**
+ * The one gate that must not be re-implemented per consumer.
+ *
+ * A margin computed with a missing input is a bound, not a number: an uncosted
+ * SKU contributes zero COGS and therefore reports as the most profitable
+ * product in the catalogue. Loss-maker ranking, and any "worst products" view,
+ * must filter on this.
+ */
+export function isRankableForLossMaker(result: OrderProfitResult): boolean {
+  return (
+    result.status === 'computed' &&
+    result.confidence.level !== 'incomplete' &&
+    result.recognition.kind !== 'excluded'
+  );
+}
