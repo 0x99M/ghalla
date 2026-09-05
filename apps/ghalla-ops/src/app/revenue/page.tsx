@@ -9,6 +9,11 @@ export default async function RevenuePage() {
   return (
     <main>
       <h1>Revenue</h1>
+      {report.partial ? (
+        <p role="alert">
+          Partial: {report.missing.map((m) => `${m.platform} (${m.reason})`).join('; ')}
+        </p>
+      ) : null}
       <p>
         List MRR {report.listMrrMinor} halalas · list ARR {report.listArrMinor} · {report.billedStores}{' '}
         billed stores

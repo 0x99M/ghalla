@@ -11,6 +11,9 @@ export async function GET(
   context: { params: Promise<{ platform: string; storeId: string }> },
 ): Promise<Response> {
   const { platform, storeId } = await context.params;
-  const result = await storeDetail(getRegistry(), platform, decodeURIComponent(storeId), new Date());
+  // NOT decoded again: Next has already decoded the dynamic segment, and a
+  // second pass throws URIError on a store id containing a bare '%' and
+  // silently rewrites one containing an encoded slash.
+  const result = await storeDetail(getRegistry(), platform, storeId, new Date());
   return result.kind === 'found' ? ok(result.detail) : notFound(result.kind);
 }

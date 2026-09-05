@@ -9,6 +9,9 @@ export default async function UnknownPaymentMethodsPage() {
   return (
     <main>
       <h1>Unmapped payment methods</h1>
+      {queue.partial ? (
+        <p role="alert">Partial: {queue.missing.map((m) => m.platform).join(', ')}</p>
+      ) : null}
       <p>Each row is a rail priced by fallback, so its gateway fee is a guess.</p>
       <ul>
         {queue.rows.map((row) => (

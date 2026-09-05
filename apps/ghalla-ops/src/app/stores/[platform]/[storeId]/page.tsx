@@ -10,7 +10,8 @@ export default async function StoreDetailPage({
   readonly params: Promise<{ platform: string; storeId: string }>;
 }) {
   const { platform, storeId } = await params;
-  const result = await storeDetail(getRegistry(), platform, decodeURIComponent(storeId), new Date());
+  // Already decoded by Next; see the route handler beside this page.
+  const result = await storeDetail(getRegistry(), platform, storeId, new Date());
 
   if (result.kind === 'unavailable') {
     // A platform we could not read is NOT a store that does not exist, and

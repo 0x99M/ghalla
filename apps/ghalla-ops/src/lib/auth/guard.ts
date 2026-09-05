@@ -31,19 +31,54 @@ export type GuardOutcome =
   | { readonly kind: 'unauthorized' };
 
 /**
+ * A base that cannot exist, used only to resolve a candidate and see where it
+ * lands. `.invalid` is reserved by RFC 2606 and can never be a real host.
+ */
+const RESOLUTION_BASE = 'https://portal.invalid';
+
+/**
  * Where to send someone back to after they log in.
  *
- * ONLY a same-site absolute path. `next=https://elsewhere.example` would make
- * the login page an open redirect — and a login page is the single most useful
- * place in any application to have one, because the victim has just been asked
- * to prove they trust it. A protocol-relative `//host` is refused for the same
- * reason: browsers treat it as absolute.
+ * ONLY a same-site absolute path. A login page is the single most useful place
+ * in any application to have an open redirect, because the victim has just been
+ * asked to prove they trust the site — so this is checked by RESOLVING the
+ * candidate with the same URL parser that will later resolve it, and demanding
+ * that it stay on the base origin.
+ *
+ * That is the whole reason it is not a set of string tests. The first version
+ * of this function rejected a literal `//` prefix, and an adversarial review
+ * found four ways past it, because `new URL` is not a string comparison:
+ * WHATWG resolution treats a BACKSLASH as a slash for special schemes, and
+ * strips raw TAB, LF and CR before parsing at all. So `/\host`, `/<TAB>/host`,
+ * `/<LF>/host` and `/<CR>/host` all passed the check and then resolved to a
+ * foreign origin — carrying, in the same 303, the session cookie the operator
+ * had just typed the one shared key to obtain.
+ *
+ * Resolving here means the guard and the consumer cannot disagree: whatever
+ * trick the parser has, both sides have it. A blacklist would have to be
+ * extended every time the URL specification grows another equivalence.
  */
 export function safeNext(value: string | null | undefined): string | null {
   if (value === undefined || value === null || value === '') return null;
-  if (!value.startsWith('/') || value.startsWith('//')) return null;
-  if (value.startsWith(LOGIN_PATH)) return null;
-  return value;
+  // Still required: an absolute `https://elsewhere` resolves to its OWN origin
+  // and would otherwise be judged against the wrong base.
+  if (!value.startsWith('/')) return null;
+
+  let resolved: URL;
+  try {
+    resolved = new URL(value, RESOLUTION_BASE);
+  } catch {
+    return null;
+  }
+  if (resolved.origin !== RESOLUTION_BASE) return null;
+
+  // Rebuilt from the parsed result rather than returned as given, so what the
+  // caller redirects to is exactly what was checked — no room for a second
+  // parse to read it differently. The fragment is dropped: it never reaches a
+  // server, and carrying it would only widen what this has to reason about.
+  const path = `${resolved.pathname}${resolved.search}`;
+  if (path.startsWith(LOGIN_PATH)) return null;
+  return path;
 }
 
 export function loginRedirect(pathname: string, search = ''): string {

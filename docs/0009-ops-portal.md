@@ -413,6 +413,69 @@ The exception is configuration: a platform listed with no `DATABASE_URL_*`
 fails at startup. It will never fix itself, and starting anyway would make a
 deploy-time typo look exactly like an outage.
 
+## What an adversarial review found
+
+Seven dimensions reviewed in parallel, every finding then put to three
+independent skeptics each instructed to refute it. Twenty-five findings raised,
+seven survived. All seven are fixed, and each has a regression test.
+
+**An open redirect on the login page, and it was the guard's own subject.**
+`safeNext` rejected an off-site target by testing for a literal `//` prefix.
+`new URL` is not a string comparison: WHATWG resolution treats a BACKSLASH as a
+slash for special schemes and strips raw TAB, LF and CR before parsing at all.
+So `/\host`, `/<TAB>/host`, `/<LF>/host` and `/<CR>/host` all passed and then
+resolved to a foreign origin — carried by the same 303 that sets the session
+cookie, moments after the operator typed the one shared key for every merchant's
+data. The fix is structural rather than a blacklist: resolve the candidate
+against a fixed unreachable base with the same parser that will later resolve
+it, and require the origin to match. The guard and its consumer now cannot
+disagree, whatever equivalence the URL specification grows next.
+
+**A store's failure list was the platform's.** `recentFailures` took the twenty
+newest failed events with no store predicate and filtered afterwards in
+JavaScript. `failed` is a terminal dead-letter state that nothing clears, so on
+any platform with more than a handful of stores the newest twenty belong to
+whichever store is loudest — and an empty list reads as "this store has no
+failures" on the one screen somebody opened because they think it is broken.
+The predicate is in SQL now.
+
+**Store detail could 500 instead of degrading.** It is the only read path that
+does not go through `queryPlatforms`, so nothing caught a rejection for it; its
+`verify` call was no protection because successful probes are cached for the
+life of the process, so a platform that was up at startup keeps answering
+"reachable" while its database refuses connections. The `unavailable` branch
+that exists for exactly that outage was unreachable.
+
+**The unmapped-rail queue counted payment legs and called them orders.**
+`order_payments` is one row per leg, so an order settled in two captures counted
+twice — ranking a rail by how often it is split rather than by how much of the
+business uses it. Now `count(distinct orders.id)`, and test orders are excluded:
+a test order is not evidence a rail deserves a fee rule.
+
+**The overview's "stores" was the subscription-row count.** It disagreed with
+the store list in both directions — a store between its install webhook and its
+first billing webhook has no subscription row, and an uninstalled store still
+has one — while both screens printed the word "stores". Exactly the failure this
+document says the query layer exists to prevent. `StatusCounts.total` is now
+`subscriptions`, named for what it holds, and the overview counts `stores`.
+
+Two more were fixed against the panel's verdict, because it refuted them and I
+think it was wrong:
+
+- **No `error` listener on a `pg` Pool.** `pg` emits `error` on the pool when an
+  idle client fails — a database restart, a proxy reaping a connection — and an
+  `error` event with no listener is an uncaught exception in Node. The pool has
+  already discarded the broken client by then, so the fix logs rather than
+  exits; what is not acceptable is that a service cycling connections all night
+  does it silently. This affects every service, so it landed in `createPool`.
+- **A dynamic route segment decoded twice.** Next has already decoded it, and a
+  second pass throws `URIError` on a store id containing a bare `%`.
+
+Eighteen findings were refuted and are recorded as such: the confident-sounding
+ones included a permanent lockout via the global rate limiter, a `Promise.all`
+at the fan-out choke point, and cross-currency coverage summing. Each was
+checked against the code and did not survive.
+
 ## Deliberately not built yet
 
 - **No styling.** Design is a later brief, and anything invented now would read

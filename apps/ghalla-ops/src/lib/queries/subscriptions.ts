@@ -37,7 +37,17 @@ export interface StatusCounts {
   readonly pastDue: number;
   readonly canceled: number;
   readonly expired: number;
-  readonly total: number;
+  /**
+   * SUBSCRIPTION ROWS, which is not the store count and must never be labelled
+   * as one.
+   *
+   * The two genuinely differ in both directions: a store between its install
+   * webhook and its first billing webhook has no row here at all, and a store
+   * that uninstalled still has one. This field was called `total` and rendered
+   * as "N stores", which is precisely the two-screens-disagreeing failure the
+   * query layer exists to prevent — the store list counts `stores`.
+   */
+  readonly subscriptions: number;
 }
 
 export async function statusCounts(db: ReadOnlyDatabase): Promise<StatusCounts> {
@@ -52,7 +62,7 @@ export async function statusCounts(db: ReadOnlyDatabase): Promise<StatusCounts> 
     pastDue: of('past_due'),
     canceled: of('canceled'),
     expired: of('expired'),
-    total: rows.length,
+    subscriptions: rows.length,
   };
 }
 

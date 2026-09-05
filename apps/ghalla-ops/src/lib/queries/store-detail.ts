@@ -1,6 +1,7 @@
 import { toInstant } from '@ghalla/contracts';
 import type { Instant, PlatformId } from '@ghalla/contracts';
 import type { PlatformRegistry } from '../platforms/registry';
+import { describeError } from '../errors';
 import { describeCheck } from '../platforms/registry';
 import { recentFailures } from './ingestion';
 import type { FailedEvent } from './ingestion';
@@ -45,10 +46,24 @@ export async function storeDetail(
     return { kind: 'unavailable', reason: describeCheck(check) };
   }
 
-  const [summaries, failures] = await Promise.all([
-    storeSummaries(handle.db, now),
-    recentFailures(handle.db, 20),
-  ]);
+  // Wrapped, because this is the ONE read path that does not go through
+  // `queryPlatforms` and therefore has nothing catching a rejection for it.
+  // The probe above is not enough on its own: successful probes are cached for
+  // the life of the process, so a platform that was reachable at startup keeps
+  // answering `reachable: true` while its database is refusing connections —
+  // and the `unavailable` branch below would be unreachable for exactly the
+  // outage it exists to report.
+  let summaries: readonly StoreSummary[];
+  let failures: readonly FailedEvent[];
+  try {
+    [summaries, failures] = await Promise.all([
+      storeSummaries(handle.db, now),
+      // The STORE's own failures. Narrowed in SQL — see `recentFailures`.
+      recentFailures(handle.db, 20, storeId),
+    ]);
+  } catch (error) {
+    return { kind: 'unavailable', reason: describeError(error) };
+  }
 
   const store = summaries.find((summary) => summary.storeId === storeId);
   if (store === undefined) return { kind: 'not_found' };
@@ -58,7 +73,7 @@ export async function storeDetail(
     detail: {
       platform: handle.platform,
       store,
-      recentFailures: failures.filter((failure) => failure.storeId === storeId),
+      recentFailures: failures,
       capturedAt: toInstant(now.toISOString()),
     },
   };

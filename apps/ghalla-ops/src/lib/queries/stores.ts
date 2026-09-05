@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { toInstant } from '@ghalla/contracts';
 import type { Instant, PlatformId } from '@ghalla/contracts';
 import { stores } from '@ghalla/persistence/schema';
@@ -7,6 +8,7 @@ import { coverageByStore } from './coverage';
 import { failedJobsByStore, lastWebhookByStore, orderBackfillByStore } from './ingestion';
 import type { BackfillState } from './ingestion';
 import { ordersInPeriodByStore } from './orders';
+import { aggregateRow } from './row';
 import { activation, storeHealth } from './store-health';
 import type { Activation, StoreFacts, StoreHealth } from './store-health';
 import { subscriptionsByStore } from './subscriptions';
@@ -40,6 +42,18 @@ export interface StoreSummary {
   readonly ordersInPeriod: number;
   readonly health: StoreHealth;
   readonly activation: Activation;
+}
+
+/**
+ * How many stores exist, from the table the store list pages over.
+ *
+ * Its own query rather than `storeSummaries().length`, because the overview
+ * wants one number and that function does six aggregates to build seven fields
+ * per store.
+ */
+export async function countStores(db: ReadOnlyDatabase): Promise<number> {
+  const rows = await db.select({ n: sql<number>`count(*)::int` }).from(stores);
+  return aggregateRow(rows, { n: 0 }).n;
 }
 
 export async function storeSummaries(

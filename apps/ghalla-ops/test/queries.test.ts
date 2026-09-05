@@ -58,7 +58,7 @@ describe('statusCounts', () => {
       pastDue: 1,
       canceled: 1,
       expired: 0,
-      total: 6,
+      subscriptions: 6,
     });
   });
 });
@@ -276,5 +276,19 @@ describe('unknownPaymentMethods', () => {
   it('leaves mapped rails out — a known card is not a queue item', async () => {
     const rows = await unknownPaymentMethods(integration.db, 10);
     expect(rows.some((row) => row.rawMethodLabel === 'mada')).toBe(false);
+  });
+
+  it('COUNTS ORDERS, NOT PAYMENT LEGS', async () => {
+    // demo:3's single order settled in two captures on the same unmapped rail.
+    // `count(*)` over `order_payments` would report two, ranking a rail by how
+    // often it is split rather than by how much of the business uses it.
+    const rows = await unknownPaymentMethods(integration.db, 10);
+    const cheque = rows.find((row) => row.rawMethodLabel === 'bank_cheque');
+    expect(cheque?.orders).toBe(1);
+  });
+
+  it('excludes a test order, which is not evidence that a rail needs a fee rule', async () => {
+    const rows = await unknownPaymentMethods(integration.db, 10);
+    expect(rows.some((row) => row.rawMethodLabel === 'test_only_rail')).toBe(false);
   });
 });

@@ -35,12 +35,23 @@ afterAll(async () => {
 });
 
 const working = () => registryFor({ demo: integration.db });
+
+/** Probes clean, then fails every query — a platform that went down after startup. */
+const brokenDb = () =>
+  ({
+    select: () => {
+      throw new Error('the database has gone away');
+    },
+  }) as never;
 const degraded = () => registryFor({ demo: integration.db }, { other: 'connection refused' });
 
 describe('overview', () => {
   it('totals a single platform', async () => {
     const report = await overview(working(), NOW);
-    expect(report.totals).toMatchObject({ stores: 6, active: 3, trialing: 1, pastDue: 1 });
+    // 7 STORES, not 6 subscription rows: demo:6 has no subscription yet and is
+    // still a store, and this number now agrees with the store list.
+    expect(report.totals).toMatchObject({ stores: 7, active: 3, trialing: 1, pastDue: 1 });
+    expect(report.platforms[0]?.overview.statuses.subscriptions).toBe(6);
     expect(report.partial).toBe(false);
     expect(report.platforms).toHaveLength(1);
   });
@@ -51,7 +62,7 @@ describe('overview', () => {
     expect(report.missing).toEqual([{ platform: 'other', reason: 'connection refused' }]);
     // The platform that worked is still fully reported. `Promise.all` would
     // have blanked this entire page.
-    expect(report.totals.stores).toBe(6);
+    expect(report.totals.stores).toBe(7);
   });
 
   it('merges coverage as two sums, not as an average of platform percentages', async () => {
@@ -128,6 +139,46 @@ describe('storeDetail', () => {
     if (result.kind !== 'found') return;
     expect(result.detail.store.health.flags).toContain('past_due');
     expect(result.detail.recentFailures).toHaveLength(6);
+  });
+
+  it('SHOWS THE STORE ITS OWN FAILURES, not the platform\'s newest twenty', async () => {
+    // The limit has to be applied after the store predicate, not before. With
+    // the filter in JavaScript, a store's failures appeared only when it
+    // happened to own some of the platform's twenty most recent — and an empty
+    // list reads as "this store has no failures" on the one screen somebody
+    // opened because they think it is broken.
+    const noisy = Array.from({ length: 25 }, (_, index) => index);
+    for (const index of noisy) {
+      await integration.client.exec(
+        `INSERT INTO webhook_events (id, store_id, platform_event_id, event_type, raw_event_type,
+          received_at, status, attempts)
+         VALUES ('demo:1:flood${String(index)}', 'demo:1', 'flood${String(index)}', 'order.created',
+          'order.created', '2026-09-05T11:5${String(index % 10)}:00Z', 'failed', 8)`,
+      );
+    }
+
+    const result = await storeDetail(working(), 'demo', 'demo:3', NOW);
+    expect(result.kind).toBe('found');
+    if (result.kind !== 'found') return;
+    expect(result.detail.recentFailures).toHaveLength(6);
+    expect(result.detail.recentFailures.every((f) => f.storeId === 'demo:3')).toBe(true);
+
+    for (const index of noisy) {
+      await integration.client.exec(
+        `DELETE FROM webhook_events WHERE id = 'demo:1:flood${String(index)}'`,
+      );
+    }
+  });
+
+  it('DEGRADES when a platform verified once and then went down', async () => {
+    // Successful probes are cached for the life of the process, so `verify`
+    // keeps answering "reachable" while the database refuses connections. This
+    // is the one read path with no fan-out catching a rejection for it, and
+    // without the guard the page falls through to Next's error screen.
+    const registry = registryFor({ demo: brokenDb() });
+    const result = await storeDetail(registry, 'demo', 'demo:1', NOW);
+    expect(result.kind).toBe('unavailable');
+    expect(result.kind === 'unavailable' && result.reason).toContain('gone away');
   });
 
   it('distinguishes an unknown platform, an unreadable one, and a missing store', async () => {

@@ -70,12 +70,20 @@ const subscription = (
   })
   VALUES ('${id}', '${planCode}', '${status}', '${at(periodStartOffsetMs)}', '${at(periodEndOffsetMs)}'${extra})`;
 
-const order = (storeId: string, n: number, placedOffsetMs: number, source: string): string => `
+const order = (
+  storeId: string,
+  n: number,
+  placedOffsetMs: number,
+  source: string,
+  isTest = false,
+): string => `
   INSERT INTO orders (id, store_id, platform_order_id, placed_at, lifecycle, payment_state, fulfillment_state,
-    raw_status_label, fulfillment_method, currency, vat_rate_bps, ingestion_source, subtotal_ex_vat_minor,
-    vat_amount_minor, shipping_charged_ex_vat_minor, cod_fee_charged_ex_vat_minor, total_inc_vat_minor)
+    raw_status_label, fulfillment_method, currency, vat_rate_bps, ingestion_source, is_test,
+    subtotal_ex_vat_minor, vat_amount_minor, shipping_charged_ex_vat_minor, cod_fee_charged_ex_vat_minor,
+    total_inc_vat_minor)
   VALUES ('${storeId}:${String(n)}', '${storeId}', '${String(n)}', '${at(placedOffsetMs)}', 'open', 'paid',
-    'delivered', 'delivered', 'carrier', 'SAR', 1500, '${source}', '100.00', '15.00', '0.00', '0.00', '115.00')`;
+    'delivered', 'delivered', 'carrier', 'SAR', 1500, '${source}', ${String(isTest)},
+    '100.00', '15.00', '0.00', '0.00', '115.00')`;
 
 const rollup = (storeId: string, date: string, revenue: string, covered: string, orders: number, dirty = false): string => `
   INSERT INTO daily_store_rollup (store_id, business_date, orders_count, revenue_ex_vat_minor,
@@ -103,11 +111,12 @@ const payment = (
   instrument: string,
   label: string,
   scheme: string | null = null,
+  leg = 0,
 ): string => `
   INSERT INTO order_payments (id, order_id, leg_index, instrument, scheme, raw_method_label, state,
     amount_gross_minor)
-  VALUES ('${storeId}:${String(orderN)}:0', '${storeId}:${String(orderN)}', 0, '${instrument}',
-    ${scheme === null ? 'NULL' : `'${scheme}'`}, '${label}', 'captured', '115.00')`;
+  VALUES ('${storeId}:${String(orderN)}:${String(leg)}', '${storeId}:${String(orderN)}', ${String(leg)},
+    '${instrument}', ${scheme === null ? 'NULL' : `'${scheme}'`}, '${label}', 'captured', '115.00')`;
 
 /**
  * Five stores, each one a case the derivations have to get right.
@@ -152,10 +161,19 @@ export async function seed(client: PGlite): Promise<void> {
     order('demo:2', 1, -20 * DAY, 'live'),
     order('demo:3', 1, -2 * DAY, 'live'),
 
+    // A TEST order, placed outside demo:1's billing period so it cannot move the
+    // metering count, carrying an unmapped rail. It must not appear in the
+    // queue: a test order is not evidence a rail deserves a fee rule.
+    order('demo:1', 8, -30 * DAY, 'live', true),
+
     payment('demo:1', 1, 'card', 'mada', 'mada'),
     payment('demo:1', 2, 'unknown', 'tabby_installments'),
     payment('demo:1', 3, 'unknown', 'tabby_installments'),
+    payment('demo:1', 8, 'unknown', 'test_only_rail'),
+    // ONE order settled in TWO captures on the same unmapped rail. It is one
+    // order, and `count(*)` over legs would call it two.
     payment('demo:3', 1, 'other', 'bank_cheque'),
+    payment('demo:3', 1, 'other', 'bank_cheque', null, 1),
 
     rollup('demo:1', '2026-09-05', '1000.00', '900.00', 3),
     rollup('demo:1', '2026-09-01', '500.00', '400.00', 2),

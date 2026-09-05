@@ -9,6 +9,7 @@ import type { Coverage } from './coverage';
 import { ingestionHealth, successRateBps } from './ingestion';
 import type { IngestionHealth } from './ingestion';
 import { ordersIngested } from './orders';
+import { countStores } from './stores';
 import { mrr, statusCounts } from './subscriptions';
 import type { MrrBreakdown, StatusCounts } from './subscriptions';
 import { COVERAGE_DAYS, trailingDays, trailingHours } from './window';
@@ -34,7 +35,10 @@ export interface PlatformOverview {
 
 export async function platformOverview(db: ReadOnlyDatabase, now: Date): Promise<PlatformOverview> {
   const day = trailingHours(24, now);
-  const [statuses, revenue, coverage, ingestion, ordersIngested24h] = await Promise.all([
+  const [stores, statuses, revenue, coverage, ingestion, ordersIngested24h] = await Promise.all([
+    // Counted from `stores`, the same table the store list pages over. Reading
+    // it off the subscription count made the two screens disagree.
+    countStores(db),
     statusCounts(db),
     mrr(db, toInstant(now.toISOString())),
     platformCoverage(db, trailingDays(COVERAGE_DAYS, now)),
@@ -43,7 +47,7 @@ export async function platformOverview(db: ReadOnlyDatabase, now: Date): Promise
   ]);
 
   return {
-    stores: statuses.total,
+    stores,
     statuses,
     mrr: revenue,
     coverage,

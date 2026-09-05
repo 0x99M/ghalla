@@ -153,8 +153,26 @@ export interface FailedEvent {
   readonly lastError: string | null;
 }
 
-/** The triage list. Newest first, because the newest failure is the one still happening. */
-export async function recentFailures(db: ReadOnlyDatabase, limit: number): Promise<readonly FailedEvent[]> {
+/**
+ * The triage list. Newest first, because the newest failure is the one still
+ * happening.
+ *
+ * `storeId` NARROWS THE QUERY rather than the result, and that distinction is
+ * the whole point. `failed` is a terminal dead-letter state — nothing clears it
+ * but an explicit replay — so the rows accumulate, and on a platform with more
+ * than a handful of stores the newest twenty all belong to whichever store is
+ * loudest. Taking the platform's twenty and filtering afterwards therefore
+ * shows a store's failures only when it happens to be the loud one, and an
+ * empty list reads as "this store has no failures". That is the wrong answer on
+ * the exact screen somebody opened because they think this store is broken.
+ *
+ * The predicate rides the existing `webhook_events_store_received_idx`.
+ */
+export async function recentFailures(
+  db: ReadOnlyDatabase,
+  limit: number,
+  storeId?: string | undefined,
+): Promise<readonly FailedEvent[]> {
   const rows = await db
     .select({
       id: webhookEvents.id,
@@ -166,7 +184,12 @@ export async function recentFailures(db: ReadOnlyDatabase, limit: number): Promi
       lastError: webhookEvents.lastError,
     })
     .from(webhookEvents)
-    .where(eq(webhookEvents.status, 'failed'))
+    .where(
+      and(
+        eq(webhookEvents.status, 'failed'),
+        storeId === undefined ? undefined : eq(webhookEvents.storeId, storeId),
+      ),
+    )
     .orderBy(desc(webhookEvents.receivedAt))
     .limit(limit);
 
@@ -228,18 +251,33 @@ export async function unknownPaymentMethods(
   db: ReadOnlyDatabase,
   limit: number,
 ): Promise<readonly UnknownPaymentMethod[]> {
+  // COUNT DISTINCT ORDERS, not rows. `order_payments` holds one row per LEG —
+  // `unique(order_id, leg_index)` exists because an order can settle in
+  // several captures — so `count(*)` counts an order once per leg and ranks a
+  // rail by how often it is split rather than by how much of the business uses
+  // it. The field is named `orders` and the ranking is a work list, so it has
+  // to be orders.
+  const distinctOrders = sql<number>`count(distinct ${orders.id})::int`;
+
   const rows = await db
     .select({
       storeId: orders.storeId,
       instrument: orderPayments.instrument,
       rawMethodLabel: orderPayments.rawMethodLabel,
-      orders: sql<number>`count(*)::int`,
+      orders: distinctOrders,
     })
     .from(orderPayments)
     .innerJoin(orders, eq(orders.id, orderPayments.orderId))
-    .where(inArray(orderPayments.instrument, ['unknown', 'other']))
+    .where(
+      and(
+        inArray(orderPayments.instrument, ['unknown', 'other']),
+        // A merchant's test order is not evidence that a rail deserves a fee
+        // rule, and counting it inflates the one number this list ranks by.
+        eq(orders.isTest, false),
+      ),
+    )
     .groupBy(orders.storeId, orderPayments.instrument, orderPayments.rawMethodLabel)
-    .orderBy(sql`count(*) desc`)
+    .orderBy(sql`count(distinct ${orders.id}) desc`)
     .limit(limit);
 
   return rows;

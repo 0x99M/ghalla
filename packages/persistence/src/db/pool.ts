@@ -75,8 +75,29 @@ export function resolveSsl(config: PoolConfig): false | { rejectUnauthorized: bo
   return isLocal ? false : { rejectUnauthorized: false };
 }
 
+/**
+ * `pg` emits `error` on the POOL when a client that is sitting idle fails — a
+ * database restart, a connection reaped by a proxy, a network blip. An `error`
+ * event with no listener is an uncaught exception in Node, so a pool without
+ * one turns a routine idle-connection drop into a dead process.
+ *
+ * Logged rather than rethrown, and deliberately not `process.exit`: the pool
+ * has already discarded the broken client and the next query opens a fresh one,
+ * so the recoverable case recovers. What is not acceptable is that it happens
+ * silently, because a service quietly cycling connections all night is
+ * something an operator needs to be able to find in a log.
+ */
+function attachErrorListener(pool: Pool, label: string | undefined): void {
+  pool.on('error', (error: Error) => {
+    console.error(
+      `[pg] idle client error${label === undefined ? '' : ` (${label})`}: ${error.message}`,
+      error.stack,
+    );
+  });
+}
+
 export function createPool(config: PoolConfig): Pool {
-  return new Pool({
+  const pool = new Pool({
     connectionString: config.databaseUrl,
     ssl: resolveSsl(config),
     max: config.max ?? 10,
@@ -91,6 +112,8 @@ export function createPool(config: PoolConfig): Pool {
     ...(config.queryTimeoutMs === undefined ? {} : { query_timeout: config.queryTimeoutMs }),
     ...(config.applicationName === undefined ? {} : { application_name: config.applicationName }),
   });
+  attachErrorListener(pool, config.applicationName);
+  return pool;
 }
 
 /**

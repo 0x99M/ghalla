@@ -59,6 +59,37 @@ describe('safeNext', () => {
     expect(safeNext('//elsewhere.example/steal')).toBeNull();
   });
 
+  it('refuses every shape that a STRING TEST for "//" lets through', () => {
+    // The first version of this guard tested for a literal `//` prefix. All
+    // four of these passed it and then resolved to a foreign origin, because
+    // `new URL` treats a backslash as a slash for special schemes and strips
+    // raw TAB, LF and CR before parsing. The 303 that would have carried them
+    // is the one that also sets the session cookie.
+    for (const target of ['/\\evil.example/ops', '/\t/evil.example', '/\n/evil.example', '/\r/evil.example']) {
+      expect(safeNext(target)).toBeNull();
+    }
+  });
+
+  it('agrees with the parser that will actually resolve it', () => {
+    // The guard resolves rather than pattern-matches, so whatever equivalence
+    // the URL specification grows next, both sides have it.
+    for (const target of ['/\\evil.example', '/\t/evil.example', '//evil.example', 'https://evil.example']) {
+      const accepted = safeNext(target);
+      expect(accepted).toBeNull();
+      // And the thing the guard refused really would have escaped.
+      expect(new URL(target, 'https://ops.example').origin).not.toBe('https://ops.example');
+    }
+  });
+
+  it('keeps a normal same-site target, path and query intact', () => {
+    expect(safeNext('/stores?status=past_due&sort=coverage')).toBe('/stores?status=past_due&sort=coverage');
+    expect(safeNext('/')).toBe('/');
+  });
+
+  it('drops a fragment, which never reaches a server anyway', () => {
+    expect(safeNext('/stores#section')).toBe('/stores');
+  });
+
   it('refuses to bounce back to the login page', () => {
     expect(safeNext('/login')).toBeNull();
     expect(safeNext('/login?next=%2F')).toBeNull();
