@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { toInstant } from '@ghalla/contracts';
 import type { Instant, StoreId } from '@ghalla/contracts';
-import { TRIAL_PLAN, applyChange, isPlanCode } from '@ghalla/billing';
+import { applyChange, isPlanCode, seedSubscription } from '@ghalla/billing';
 import type { Subscription, SubscriptionChange } from '@ghalla/billing';
 import type { BillingEvent, SubscriptionFacts } from '@ghalla/ports';
 import { SubscriptionRepository } from '@ghalla/persistence';
@@ -54,36 +53,6 @@ export class BillingEventHandler {
     };
   }
 
-  /**
-   * The first event a store ever gets has no row to update.
-   *
-   * Built from the event itself rather than from a default, so a store that
-   * installs straight onto a paid plan is not briefly recorded as trialing.
-   * Period dates fall back to the event's own instant because a subscription
-   * with no window has nothing to meter against — and the CHECK constraint
-   * requires `end > start`, so a placeholder day is used rather than a zero
-   * interval that would fail the write.
-   */
-  private seed(storeId: StoreId, change: SubscriptionChange): Subscription {
-    const start = change.currentPeriodStart ?? change.occurredAt;
-    const fallbackEnd = new Date(new Date(start).getTime() + 30 * 86_400_000).toISOString();
-    return {
-      storeId,
-      planCode: change.planCode ?? TRIAL_PLAN,
-      platformPlanId: change.platformPlanId,
-      status: change.status,
-      trialEndsAt: change.trialEndsAt,
-      currentPeriodStart: start,
-      currentPeriodEnd: change.currentPeriodEnd ?? toInstant(fallbackEnd),
-      lastEventAt: change.occurredAt,
-      lastReconciledAt: null,
-      // A store's FIRST event has no prior plan to be downgraded from, so there
-      // is never anything pending at this point.
-      pendingPlanCode: null,
-      pendingPlanEffectiveAt: null,
-    };
-  }
-
   async handle(storeId: StoreId, event: BillingEvent): Promise<HandleResult> {
     this.metrics.eventReceived(event.type);
 
@@ -98,7 +67,7 @@ export class BillingEventHandler {
     const current = await this.subscriptions.find(storeId);
 
     if (current === null) {
-      const seeded = this.seed(storeId, change);
+      const seeded = seedSubscription(storeId, change);
       await this.subscriptions.save(seeded, event.receivedAt);
       this.metrics.eventProcessed(event.type);
       return { kind: 'applied', subscription: seeded };

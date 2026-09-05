@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toInstant } from '@ghalla/contracts';
 import type { Instant, StoreId } from '@ghalla/contracts';
@@ -10,11 +11,13 @@ import { EntitlementsService } from '../src/billing/entitlements.service.js';
 import { EntitlementsGuard } from '../src/billing/entitlements.guard.js';
 import type { BillingRequest } from '../src/billing/entitlements.guard.js';
 import { ReconciliationService } from '../src/billing/reconciliation.service.js';
-import type { SubscriptionSource } from '../src/billing/reconciliation.service.js';
+import { SubscriptionRefreshService } from '../src/billing/subscription-refresh.service.js';
+import type { SubscriptionSource } from '../src/billing/subscription-source.js';
 import {
   EntitlementDeniedException,
   SubscriptionInactiveException,
 } from '../src/billing/entitlement-denied.exception.js';
+import { REQUIRES_FEATURE, RequiresFeature } from '../src/billing/requires-feature.decorator.js';
 
 const STORE = 'demo:1' as StoreId;
 const at = (iso: string): Instant => toInstant(iso);
@@ -55,6 +58,15 @@ class FakeRepo {
   markReconciled(storeId: StoreId, at_: Instant): Promise<void> {
     const row = this.rows.get(storeId);
     if (row !== undefined) this.rows.set(storeId, { ...row, lastReconciledAt: at_ });
+    return Promise.resolve();
+  }
+
+  dueMarked: string[] = [];
+
+  markDueForReconciliation(storeId: StoreId): Promise<void> {
+    this.dueMarked.push(storeId);
+    const row = this.rows.get(storeId);
+    if (row !== undefined) this.rows.set(storeId, { ...row, lastReconciledAt: null });
     return Promise.resolve();
   }
 }
@@ -225,7 +237,7 @@ describe('handling a billing webhook', () => {
   });
 });
 
-describe('the nightly reconciler', () => {
+describe('asking the platform about one store', () => {
   const sourceReturning = (value: PlatformSubscription | null): SubscriptionSource => ({
     fetch: () => Promise.resolve(value),
   });
@@ -236,27 +248,34 @@ describe('the nightly reconciler', () => {
     observedAt: at('2026-03-31T03:00:00.000Z'),
   });
 
-  it('says so loudly when no source is wired, rather than reporting no drift', async () => {
-    // A reconciler that silently does nothing is indistinguishable from one
-    // that found nothing wrong, and those are opposite situations.
-    const service = new ReconciliationService(repo as never, metrics, null);
-    const summary = await service.runOnce(10);
-    expect(summary).toStrictEqual({ checked: 0, corrected: 0, failed: 0, skipped: 1 });
+  const refresher = (source: SubscriptionSource | null): SubscriptionRefreshService => {
+    const s = new SubscriptionRefreshService(repo as never, metrics, source);
+    vi.spyOn(s as unknown as { nowInstant: () => Instant }, 'nowInstant').mockReturnValue(
+      at('2026-03-31T03:00:00.000Z'),
+    );
+    vi.spyOn(s['logger'], 'warn').mockImplementation(() => undefined);
+    vi.spyOn(s['logger'], 'error').mockImplementation(() => undefined);
+    return s;
+  };
+
+  it('creates the row for a store that has none — the install path', async () => {
+    // Without this, a store whose install webhook was lost sits on a
+    // provisional trial for ever: nothing else ever creates its row, because
+    // the nightly sweep only walks rows that already exist.
+    const result = await refresher(sourceReturning(platform())).refreshNow(STORE);
+    expect(result.kind).toBe('created');
+    expect(repo.rows.get(STORE)?.planCode).toBe('growth');
+    // Stamped as checked, so the sweep does not immediately re-fetch it.
+    expect(repo.rows.get(STORE)?.lastReconciledAt).not.toBeNull();
   });
 
-  it('corrects a row the webhooks got wrong, and counts it', async () => {
-    // THE reason this exists. Webhooks get dropped, and treating them as the
-    // sole source of truth guarantees someone eventually loses access they paid
-    // for — discovered by them, not by us.
+  it('corrects a row the webhooks got wrong', async () => {
+    // THE reason any of this exists. Webhooks get dropped, and treating them as
+    // the sole source of truth guarantees someone eventually loses access they
+    // paid for — discovered by them, not by us.
     repo.rows.set(STORE, subscription({ status: 'canceled' }));
-    const service = new ReconciliationService(
-      repo as never,
-      metrics,
-      sourceReturning(platform({ status: 'active' })),
-    );
-
-    const summary = await service.runOnce(10);
-    expect(summary.corrected).toBe(1);
+    const result = await refresher(sourceReturning(platform({ status: 'active' }))).refreshNow(STORE);
+    expect(result).toStrictEqual({ kind: 'corrected', from: 'canceled', to: 'active' });
     expect(repo.rows.get(STORE)?.status).toBe('active');
     expect(metrics.snapshot()['reconciliation.corrections']).toBe(1);
   });
@@ -264,10 +283,8 @@ describe('the nightly reconciler', () => {
   it('writes nothing when the platform agrees', async () => {
     // The correction count is only a signal if its baseline is silence.
     repo.rows.set(STORE, subscription({ status: 'active', planCode: 'growth', platformPlanId: 'plat_2' }));
-    const service = new ReconciliationService(repo as never, metrics, sourceReturning(platform()));
-
-    const summary = await service.runOnce(10);
-    expect(summary.corrected).toBe(0);
+    const result = await refresher(sourceReturning(platform())).refreshNow(STORE);
+    expect(result.kind).toBe('unchanged');
     expect(repo.saved).toHaveLength(0);
     expect(repo.rows.get(STORE)?.lastReconciledAt).not.toBeNull();
   });
@@ -276,50 +293,40 @@ describe('the nightly reconciler', () => {
     // A null answer is a transient API fault as often as it is an uninstall,
     // and one of those two is a paying customer.
     repo.rows.set(STORE, subscription({ status: 'active' }));
-    const service = new ReconciliationService(repo as never, metrics, sourceReturning(null));
-
-    const summary = await service.runOnce(10);
-    expect(summary.skipped).toBe(1);
+    const result = await refresher(sourceReturning(null)).refreshNow(STORE);
+    expect(result.kind).toBe('unrecognised');
     expect(repo.rows.get(STORE)?.status).toBe('active');
   });
 
-  it('steps over a store that throws and keeps going', async () => {
-    // One store whose credentials were revoked must not stop the other four
-    // hundred from being checked.
-    repo.rows.set(STORE, subscription());
-    repo.rows.set('demo:2' as StoreId, subscription({ storeId: 'demo:2' as StoreId, status: 'canceled' }));
-
-    let call = 0;
-    const flaky: SubscriptionSource = {
-      fetch: () => {
-        call += 1;
-        if (call === 1) return Promise.reject(new Error('401 from the platform'));
-        return Promise.resolve(platform({ status: 'active' }));
-      },
-    };
-    const service = new ReconciliationService(repo as never, metrics, flaky);
-
-    const summary = await service.runOnce(10);
-    expect(summary.checked).toBe(2);
-    expect(summary.failed).toBe(1);
-    expect(summary.corrected).toBe(1);
-    expect(metrics.snapshot()['reconciliation.failures']).toBe(1);
+  it('reports unrecognised without writing when there was no row either', async () => {
+    const result = await refresher(sourceReturning(null)).refreshNow(STORE);
+    expect(result.kind).toBe('unrecognised');
+    expect(repo.saved).toHaveLength(0);
   });
 
-  it('ignores a plan code from the platform that this build cannot resolve', async () => {
-    // Same rule as the webhook path: keep the last good plan rather than write
-    // a code no build can resolve. A reconciliation is not a licence to write
-    // something worse than what is already there.
-    repo.rows.set(STORE, subscription({ planCode: 'growth', status: 'canceled' }));
-    const service = new ReconciliationService(
-      repo as never,
-      metrics,
-      sourceReturning(platform({ status: 'active', planCode: 'mystery_tier' })),
-    );
+  it('reports unavailable rather than pretending it found no drift', async () => {
+    // A component that silently does nothing is indistinguishable from one that
+    // found nothing wrong, and those are opposite situations.
+    const result = await refresher(null).refreshNow(STORE);
+    expect(result.kind).toBe('unavailable');
+  });
 
-    await service.runOnce(10);
+  it('ignores a plan code this build cannot resolve', async () => {
+    // Same rule as the webhook path: keep the last good plan rather than write
+    // a code no build can resolve.
+    repo.rows.set(STORE, subscription({ planCode: 'growth', status: 'canceled' }));
+    await refresher(sourceReturning(platform({ status: 'active', planCode: 'mystery' }))).refreshNow(STORE);
     expect(repo.rows.get(STORE)?.planCode).toBe('growth');
     expect(repo.rows.get(STORE)?.status).toBe('active');
+  });
+
+  it('reports a failure rather than throwing at its caller', async () => {
+    repo.rows.set(STORE, subscription());
+    const result = await refresher({
+      fetch: () => Promise.reject(new Error('401 from the platform')),
+    }).refreshNow(STORE);
+    expect(result).toStrictEqual({ kind: 'failed', error: '401 from the platform' });
+    expect(metrics.snapshot()['reconciliation.failures']).toBe(1);
   });
 
   it('records a failure that was not thrown as an Error', async () => {
@@ -327,18 +334,246 @@ describe('the nightly reconciler', () => {
     // object. `error.message` on those is undefined, and an undefined reason in
     // the failure log is how a recurring outage becomes invisible.
     repo.rows.set(STORE, subscription());
-    const service = new ReconciliationService(repo as never, metrics, {
-      fetch: () => Promise.reject('rate limited'),
+    const result = await refresher({ fetch: () => Promise.reject('rate limited') }).refreshNow(STORE);
+    expect(result).toStrictEqual({ kind: 'failed', error: 'rate limited' });
+  });
+
+  it('collapses two simultaneous refreshes into one call', async () => {
+    // A merchant double-clicking, or an install racing the first webhook. Two
+    // writes landing out of order is the failure; one fetch is the fix.
+    let calls = 0;
+    const counting: SubscriptionSource = {
+      fetch: () => {
+        calls += 1;
+        return Promise.resolve(platform());
+      },
+    };
+    const service = refresher(counting);
+    const [a, b] = await Promise.all([service.refreshNow(STORE), service.refreshNow(STORE)]);
+    expect(calls).toBe(1);
+    expect(a).toStrictEqual(b);
+  });
+
+  it('lets a later refresh through once the first has finished', async () => {
+    let calls = 0;
+    const counting: SubscriptionSource = {
+      fetch: () => {
+        calls += 1;
+        return Promise.resolve(platform());
+      },
+    };
+    const service = refresher(counting);
+    await service.refreshNow(STORE);
+    await service.refreshNow(STORE);
+    expect(calls).toBe(2);
+  });
+});
+
+describe('a merchant asking for a refresh', () => {
+  const platform = (): PlatformSubscription => ({
+    facts: facts({ status: 'active' }),
+    isDevelopmentStore: false,
+    observedAt: at('2026-03-31T03:00:00.000Z'),
+  });
+
+  const refresher = (
+    source: SubscriptionSource | null,
+    now = at('2026-03-31T03:00:00.000Z'),
+  ): SubscriptionRefreshService => {
+    const s = new SubscriptionRefreshService(repo as never, metrics, source);
+    vi.spyOn(s as unknown as { nowInstant: () => Instant }, 'nowInstant').mockReturnValue(now);
+    vi.spyOn(s['logger'], 'warn').mockImplementation(() => undefined);
+    vi.spyOn(s['logger'], 'error').mockImplementation(() => undefined);
+    return s;
+  };
+
+  it('returns immediately and does the work in the background', async () => {
+    // The whole point. A dashboard that hangs while we talk to a third party is
+    // what the local-table-is-truth rule exists to prevent.
+    repo.rows.set(STORE, subscription({ status: 'canceled', lastReconciledAt: null }));
+    const service = refresher({ fetch: () => Promise.resolve(platform()) });
+
+    expect(await service.requestRefresh(STORE)).toStrictEqual({ kind: 'started' });
+    await service.settled();
+    expect(repo.rows.get(STORE)?.status).toBe('active');
+  });
+
+  it('marks the store due before starting, so the request survives a restart', async () => {
+    // The row IS the queue. If this process dies between the request and the
+    // fetch, the nightly sweep picks the store up first — it orders NULLS
+    // FIRST.
+    repo.rows.set(STORE, subscription({ lastReconciledAt: at('2026-03-30T00:00:00.000Z') }));
+    const service = refresher({ fetch: () => new Promise(() => undefined) });
+    await service.requestRefresh(STORE);
+    expect(repo.dueMarked).toContain(STORE);
+  });
+
+  it('refuses to hammer the platform when asked repeatedly', async () => {
+    // Holding the button down must not become a way to earn a rate-limit ban
+    // for every other store.
+    repo.rows.set(STORE, subscription({ lastReconciledAt: at('2026-03-31T02:59:30.000Z') }));
+    const service = refresher({ fetch: () => Promise.resolve(platform()) });
+
+    const outcome = await service.requestRefresh(STORE);
+    expect(outcome.kind).toBe('throttled');
+    if (outcome.kind === 'throttled') expect(outcome.lastCheckedAt).toBe(at('2026-03-31T02:59:30.000Z'));
+    expect(repo.dueMarked).toHaveLength(0);
+  });
+
+  it('allows it again once the throttle window has passed', async () => {
+    repo.rows.set(STORE, subscription({ lastReconciledAt: at('2026-03-31T02:50:00.000Z') }));
+    const service = refresher({ fetch: () => Promise.resolve(platform()) });
+    expect((await service.requestRefresh(STORE)).kind).toBe('started');
+    await service.settled();
+  });
+
+  it('works for a store that has never been checked', async () => {
+    repo.rows.set(STORE, subscription({ lastReconciledAt: null }));
+    const service = refresher({ fetch: () => Promise.resolve(platform()) });
+    expect((await service.requestRefresh(STORE)).kind).toBe('started');
+    await service.settled();
+  });
+
+  it('works for a store that has no row at all', async () => {
+    // The install-shaped case: nothing to mark due, because there is nothing to
+    // mark. The fetch still runs and creates the row.
+    const service = refresher({ fetch: () => Promise.resolve(platform()) });
+    expect((await service.requestRefresh(STORE)).kind).toBe('started');
+    await service.settled();
+    expect(repo.dueMarked).toHaveLength(0);
+    expect(repo.rows.get(STORE)).toBeDefined();
+  });
+
+  it('says so when no source is wired instead of queueing forever', async () => {
+    expect(await refresher(null).requestRefresh(STORE)).toStrictEqual({ kind: 'unavailable' });
+  });
+
+  it('does not take the process down when the source throws synchronously', async () => {
+    // `requestRefresh` starts the work and does NOT await it, so an unhandled
+    // rejection here would end the container. This asserts the totality that
+    // makes voiding the promise safe: refreshNow resolves to `failed` rather
+    // than rejecting, whatever the source does.
+    repo.rows.set(STORE, subscription({ lastReconciledAt: null }));
+    const service = refresher({
+      fetch: () => {
+        throw new Error('synchronous explosion');
+      },
+    });
+    await expect(service.refreshNow(STORE)).resolves.toStrictEqual({
+      kind: 'failed',
+      error: 'synchronous explosion',
     });
 
-    const summary = await service.runOnce(10);
+    expect((await service.requestRefresh(STORE)).kind).toBe('started');
+    await expect(service.settled()).resolves.toBeUndefined();
+  });
+});
+
+describe('provisioning at install', () => {
+  it('writes the real subscription so a lost webhook does not strand the store', async () => {
+    const service = new SubscriptionRefreshService(repo as never, metrics, {
+      fetch: () =>
+        Promise.resolve({
+          facts: facts({ status: 'active', planCode: 'scale' }),
+          isDevelopmentStore: false,
+          observedAt: at('2026-03-31T03:00:00.000Z'),
+        }),
+    });
+    vi.spyOn(service['logger'], 'warn').mockImplementation(() => undefined);
+
+    const result = await service.provisionAtInstall(STORE);
+    expect(result.kind).toBe('created');
+    expect(repo.rows.get(STORE)?.planCode).toBe('scale');
+  });
+
+  it('leaves the store on a provisional trial when the platform cannot be reached', async () => {
+    // Recoverable: the merchant gets a working dashboard, the nightly sweep
+    // fixes the row, and nobody is shown a payment wall on their first load.
+    const service = new SubscriptionRefreshService(repo as never, metrics, {
+      fetch: () => Promise.reject(new Error('timeout')),
+    });
+    vi.spyOn(service['logger'], 'warn').mockImplementation(() => undefined);
+
+    expect((await service.provisionAtInstall(STORE)).kind).toBe('failed');
+    expect(repo.rows.get(STORE)).toBeUndefined();
+  });
+
+  it('says so when no source is wired', async () => {
+    const service = new SubscriptionRefreshService(repo as never, metrics, null);
+    vi.spyOn(service['logger'], 'warn').mockImplementation(() => undefined);
+    expect((await service.provisionAtInstall(STORE)).kind).toBe('unavailable');
+  });
+});
+
+describe('the nightly sweep', () => {
+  const sweeper = (source: SubscriptionSource | null): ReconciliationService => {
+    const refresh = new SubscriptionRefreshService(repo as never, metrics, source);
+    vi.spyOn(refresh as unknown as { nowInstant: () => Instant }, 'nowInstant').mockReturnValue(
+      at('2026-03-31T03:00:00.000Z'),
+    );
+    vi.spyOn(refresh['logger'], 'warn').mockImplementation(() => undefined);
+    const service = new ReconciliationService(repo as never, refresh);
+    vi.spyOn(service['logger'], 'warn').mockImplementation(() => undefined);
+    vi.spyOn(service['logger'], 'log').mockImplementation(() => undefined);
+    return service;
+  };
+
+  const platform = (over: Partial<SubscriptionFacts> = {}): PlatformSubscription => ({
+    facts: facts(over),
+    isDevelopmentStore: false,
+    observedAt: at('2026-03-31T03:00:00.000Z'),
+  });
+
+  it('tallies what it did', async () => {
+    repo.rows.set(STORE, subscription({ status: 'canceled' }));
+    repo.rows.set('demo:2' as StoreId, subscription({ storeId: 'demo:2' as StoreId, status: 'canceled' }));
+
+    const summary = await sweeper({ fetch: () => Promise.resolve(platform({ status: 'active' })) }).runOnce(10);
+    expect(summary).toStrictEqual({ checked: 2, created: 0, corrected: 2, failed: 0, skipped: 0 });
+  });
+
+  it('steps over a store that throws and keeps going', async () => {
+    // One store whose credentials have been revoked must not stop the other
+    // four hundred from being checked.
+    repo.rows.set(STORE, subscription());
+    repo.rows.set('demo:2' as StoreId, subscription({ storeId: 'demo:2' as StoreId, status: 'canceled' }));
+
+    let call = 0;
+    const summary = await sweeper({
+      fetch: () => {
+        call += 1;
+        if (call === 1) return Promise.reject(new Error('401'));
+        return Promise.resolve(platform({ status: 'active' }));
+      },
+    }).runOnce(10);
+
+    expect(summary.checked).toBe(2);
     expect(summary.failed).toBe(1);
-    expect(metrics.snapshot()['reconciliation.failures']).toBe(1);
+    expect(summary.corrected).toBe(1);
+  });
+
+  it('counts a store the platform does not recognise as skipped, not corrected', async () => {
+    repo.rows.set(STORE, subscription());
+    const summary = await sweeper({ fetch: () => Promise.resolve(null) }).runOnce(10);
+    expect(summary.skipped).toBe(1);
+    expect(summary.corrected).toBe(0);
+  });
+
+  it('reports a whole pass that checked nothing', async () => {
+    // Distinguishable on a dashboard from `checked: 400, corrected: 0`, which
+    // is the entire point.
+    repo.rows.set(STORE, subscription());
+    const summary = await sweeper(null).runOnce(10);
+    expect(summary).toStrictEqual({ checked: 1, created: 0, corrected: 0, failed: 0, skipped: 1 });
+  });
+
+  it('does nothing quietly when there are no stores at all', async () => {
+    const summary = await sweeper(null).runOnce(10);
+    expect(summary.checked).toBe(0);
   });
 
   it('runs a pass from the nightly schedule', async () => {
-    const service = new ReconciliationService(repo as never, metrics, null);
-    await expect(service.runNightly()).resolves.toBeUndefined();
+    await expect(sweeper(null).runNightly()).resolves.toBeUndefined();
   });
 });
 
@@ -397,6 +632,19 @@ describe('resolving a store’s billing on a request', () => {
     expect(after.usage.cap).toBe(PLANS.growth.orderCap);
     // And it did NOT re-count: the cached number was still correct.
     expect(repo.countCalls).toBe(1);
+  });
+
+  it('reads the real clock when nothing pins it', async () => {
+    // Every other test here mocks the clock to sit on a boundary. This one does
+    // not, because a service whose only exercised path is the mocked one is a
+    // service nobody has run.
+    repo.rows.set(STORE, subscription({
+      currentPeriodStart: at('2020-01-01T00:00:00.000Z'),
+      currentPeriodEnd: at('2099-01-01T00:00:00.000Z'),
+    }));
+    const live = new EntitlementsService(repo as never, new UsageCache(), metrics);
+    const result = await live.describe(STORE);
+    expect(result.entitlements.access.dashboard).toBe('full');
   });
 
   it('reports a plan this build cannot resolve', async () => {
@@ -499,6 +747,32 @@ describe('the entitlements guard', () => {
       expect(body['requiredPlan']).toBeNull();
       expect(String(body['message'])).toContain('not available on any current plan');
     }
+  });
+});
+
+describe('the @RequiresFeature decorator', () => {
+  it('attaches the feature to the handler as metadata the guard reads', () => {
+    // The gate is declarative and this is the whole mechanism: the requirement
+    // sits one line above the method, where a reviewer reading the route sees
+    // it, instead of an `if (plan === …)` buried in a service.
+    // Applied as a function rather than with `@` syntax: the factory is what is
+    // under test, and decorator syntax in a test file only exercises the
+    // transform.
+    class Campaigns {
+      getCampaigns(): string {
+        return 'ok';
+      }
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(Campaigns.prototype, 'getCampaigns');
+    expect(descriptor).toBeDefined();
+    if (descriptor === undefined) return;
+    (RequiresFeature('attribution') as MethodDecorator)(
+      Campaigns.prototype,
+      'getCampaigns',
+      descriptor,
+    );
+
+    expect(Reflect.getMetadata(REQUIRES_FEATURE, Campaigns.prototype.getCampaigns)).toBe('attribution');
   });
 });
 

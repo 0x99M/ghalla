@@ -267,6 +267,23 @@ describe('the reconciler’s work list', () => {
     expect(due[0]?.storeId).toBe(OTHER_STORE);
   });
 
+  it('sends a store back to the head of the queue on request', async () => {
+    // A merchant asking for a refresh. Clearing last_reconciled_at reuses the
+    // ordering the sweep already has rather than inventing a second "please
+    // check me" flag that could disagree with it — and it means the request
+    // survives a restart, because the row is the queue.
+    await repo.save(subscription({ lastReconciledAt: at('2026-03-30T00:00:00.000Z') }), NOW);
+    await repo.save(
+      subscription({ storeId: OTHER_STORE, lastReconciledAt: at('2026-03-01T00:00:00.000Z') }),
+      NOW,
+    );
+    await repo.markDueForReconciliation(STORE_ID);
+
+    expect((await repo.find(STORE_ID))?.lastReconciledAt).toBeNull();
+    const due = await repo.dueForReconciliation(10);
+    expect(due[0]?.storeId).toBe(STORE_ID);
+  });
+
   it('advances the sweep even when nothing changed', async () => {
     await repo.save(subscription(), NOW);
     await repo.markReconciled(STORE_ID, at('2026-03-31T03:00:00.000Z'));

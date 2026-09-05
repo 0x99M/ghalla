@@ -35,7 +35,14 @@ export type {
   Subscription,
   SubscriptionChange,
 } from './subscription.js';
-export { applyChange, differsFrom, effectivePlanCode, isStale, reconcile } from './subscription.js';
+export {
+  applyChange,
+  differsFrom,
+  effectivePlanCode,
+  isStale,
+  reconcile,
+  seedSubscription,
+} from './subscription.js';
 
 export type { AccessDecision, AccessNotice, DashboardAccess, PipelineAccess } from './access.js';
 export { decideAccess, isPaying, isTrialExpired } from './access.js';

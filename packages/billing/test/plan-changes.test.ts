@@ -11,7 +11,7 @@ import {
   planOf,
 } from '../src/plans.js';
 import type { Plan, PlanCode } from '../src/plans.js';
-import { applyChange, effectivePlanCode } from '../src/subscription.js';
+import { applyChange, effectivePlanCode, seedSubscription } from '../src/subscription.js';
 import { resolveEntitlements } from '../src/entitlements.js';
 import type { Subscription, SubscriptionChange } from '../src/subscription.js';
 
@@ -292,5 +292,55 @@ describe('a downgrade mid-cycle', () => {
       PLANS.growth.orderCap,
     );
     expect(resolveEntitlements(scheduled.next, APRIL, false).orderCap).toBe(PLANS.starter.orderCap);
+  });
+});
+
+describe('seeding a store that has no row yet', () => {
+  const storeId = 'demo:1' as StoreId;
+
+  it('records what the source actually said, not a default', () => {
+    // A store that installs straight onto a paid plan must not be briefly
+    // recorded as trialing: a merchant whose first dashboard load says "trial"
+    // after they have just paid has already lost some confidence in the
+    // numbers.
+    const seeded = seedSubscription(
+      storeId,
+      change({
+        status: 'active',
+        planCode: 'scale',
+        platformPlanId: 'plat_7',
+        currentPeriodStart: MARCH,
+        currentPeriodEnd: APRIL,
+      }),
+    );
+    expect(seeded.status).toBe('active');
+    expect(seeded.planCode).toBe('scale');
+    expect(seeded.platformPlanId).toBe('plat_7');
+    expect(seeded.currentPeriodStart).toBe(MARCH);
+    expect(seeded.currentPeriodEnd).toBe(APRIL);
+    expect(seeded.lastEventAt).toBe(change().occurredAt);
+  });
+
+  it('falls back to the trial plan when the source named no plan we know', () => {
+    const seeded = seedSubscription(storeId, change({ planCode: null }));
+    expect(seeded.planCode).toBe('growth');
+  });
+
+  it('invents a period rather than failing the write', () => {
+    // A subscription with no window has nothing to meter against, and the CHECK
+    // constraint requires end > start — a zero-length interval would be
+    // rejected outright and leave the store with no row at all.
+    const seeded = seedSubscription(storeId, change({ currentPeriodStart: null, currentPeriodEnd: null }));
+    expect(seeded.currentPeriodStart).toBe(change().occurredAt);
+    expect(new Date(seeded.currentPeriodEnd).getTime()).toBeGreaterThan(
+      new Date(seeded.currentPeriodStart).getTime(),
+    );
+  });
+
+  it('has nothing pending, because there is no prior plan to have left', () => {
+    const seeded = seedSubscription(storeId, change({ planCode: 'starter' }));
+    expect(seeded.pendingPlanCode).toBeNull();
+    expect(seeded.pendingPlanEffectiveAt).toBeNull();
+    expect(seeded.lastReconciledAt).toBeNull();
   });
 });

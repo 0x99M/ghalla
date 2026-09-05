@@ -1,5 +1,5 @@
 import type { Instant, StoreId, SubscriptionStatus } from '@ghalla/contracts';
-import { isDowngrade, planOf } from './plans.js';
+import { TRIAL_PLAN, isDowngrade, planOf } from './plans.js';
 import type { PlanCode } from './plans.js';
 
 /**
@@ -72,6 +72,42 @@ export type ApplyOutcome =
 export type ReconcileOutcome =
   | { readonly kind: 'applied'; readonly next: Subscription }
   | { readonly kind: 'unchanged'; readonly reason: string };
+
+/**
+ * The row for a store that has none yet.
+ *
+ * Built from what the source actually said rather than from a default, so a
+ * store that installs straight onto a paid plan is not briefly recorded as
+ * trialing — a merchant whose first dashboard load says "trial" after they have
+ * just paid has already lost some confidence in the numbers.
+ *
+ * Shared by the webhook handler and the install-time fetch on purpose. Two
+ * copies of this would drift, and the drift would show up as "the reconciler
+ * says one thing and the install said another" for stores nobody can reproduce.
+ *
+ * The period end falls back to a placeholder month because a subscription with
+ * no window has nothing to meter against, and the CHECK constraint requires
+ * `end > start` — a zero-length interval would fail the write outright and
+ * leave the store with no row at all.
+ */
+export function seedSubscription(storeId: StoreId, change: SubscriptionChange): Subscription {
+  const start = change.currentPeriodStart ?? change.occurredAt;
+  const fallbackEnd = new Date(new Date(start).getTime() + 30 * 86_400_000).toISOString() as Instant;
+  return {
+    storeId,
+    planCode: change.planCode ?? TRIAL_PLAN,
+    platformPlanId: change.platformPlanId,
+    status: change.status,
+    trialEndsAt: change.trialEndsAt,
+    currentPeriodStart: start,
+    currentPeriodEnd: change.currentPeriodEnd ?? fallbackEnd,
+    lastEventAt: change.occurredAt,
+    lastReconciledAt: null,
+    // A store's FIRST record has no prior plan to have been downgraded from.
+    pendingPlanCode: null,
+    pendingPlanEffectiveAt: null,
+  };
+}
 
 /**
  * Whether an event is older than what we have already applied.

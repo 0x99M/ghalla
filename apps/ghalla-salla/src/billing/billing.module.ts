@@ -9,6 +9,7 @@ import { BillingMetrics } from './billing.metrics.js';
 import { EntitlementsGuard } from './entitlements.guard.js';
 import { EntitlementsService } from './entitlements.service.js';
 import { ReconciliationService } from './reconciliation.service.js';
+import { SubscriptionRefreshService } from './subscription-refresh.service.js';
 
 /**
  * Billing wiring.
@@ -37,8 +38,16 @@ import { ReconciliationService } from './reconciliation.service.js';
     EntitlementsService,
     EntitlementsGuard,
     BillingEventHandler,
+    SubscriptionRefreshService,
     ReconciliationService,
   ],
-  exports: [EntitlementsService, EntitlementsGuard, BillingEventHandler, ReconciliationService, BillingMetrics],
+  exports: [
+    EntitlementsService,
+    EntitlementsGuard,
+    BillingEventHandler,
+    SubscriptionRefreshService,
+    ReconciliationService,
+    BillingMetrics,
+  ],
 })
 export class BillingModule {}

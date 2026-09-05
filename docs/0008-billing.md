@@ -191,6 +191,39 @@ deciding in the moment, and a twelve-month commitment is a bigger ask than the
 feature is worth to them right then — annual is what you offer someone who has
 already stayed.
 
+## Asking the platform: one path, three triggers
+
+`SubscriptionRefreshService.refreshNow` is the only code that fetches the
+platform's answer for a store and writes it down. Three callers use it:
+
+| Trigger | Why |
+|---|---|
+| Install handshake | A store whose first billing webhook was lost would otherwise sit on a provisional trial for ever — nothing else creates its row, because the sweep only walks rows that exist. |
+| Merchant refresh | Self-service answer to "I upgraded, where is my feature". |
+| Nightly sweep | Drift repair. |
+
+Three implementations of "ask the platform and reconcile" would drift, and the
+drift would surface as *the reconciler says one thing and the install said
+another* on stores nobody can reproduce.
+
+**The merchant refresh never blocks.** `requestRefresh` marks the store due in
+the database — the row IS the queue, so the request survives this process
+dying and the nightly sweep is the safety net — then starts the fetch detached
+and returns. A dashboard that hangs while we talk to a third party is exactly
+what the local-table-is-truth rule exists to prevent, and a synchronous
+"lazy reconciliation" on the request path would reintroduce it.
+
+It is throttled to one fetch per store per minute, using `last_reconciled_at`
+itself rather than a separate timer: durable, shared across replicas, no new
+state. Holding the button down must not become a way to earn a rate-limit ban
+for every other store. Concurrent refreshes for one store collapse into a single
+call, so a double-click cannot produce two writes that land out of order.
+
+The detached promise carries no `.catch`. `refreshNow` is total — every failure,
+including one thrown synchronously by the source, becomes a `failed` result —
+and that totality is asserted by a test rather than guarded by a catch block
+that could never fire.
+
 ## What is deliberately not wired
 
 `EntitlementsGuard` is provided by `BillingModule` but not registered globally,
@@ -198,6 +231,31 @@ and no controller carries `@RequiresFeature` — there is nothing store-scoped t
 gate until the dashboard API exists, and a global guard would start resolving
 entitlements for the healthcheck.
 
-`SUBSCRIPTION_SOURCE` is unbound, so the reconciler logs and skips rather than
-reporting no drift. A reconciler that silently does nothing is indistinguishable
-from one that found nothing wrong, and those are opposite situations.
+`SUBSCRIPTION_SOURCE` is unbound. Every caller reports `unavailable` and the
+sweep logs *"checked nothing; is a subscription source wired?"* rather than
+returning a clean zero — a component that silently does nothing is
+indistinguishable from one that found nothing wrong, and those are opposite
+situations.
+
+A `NoopSubscriptionSource` returning `null` per store was considered and
+rejected for the same reason, only worse: `null` means "the platform does not
+recognise this store", which stamps `last_reconciled_at` on every store every
+night. The freshest signal that reconciliation is broken is that column, and a
+Noop would keep it permanently green.
+
+## The Salla adapter, when it lands
+
+Three pieces, and only the first is unknown:
+
+1. **`getSubscription`** against Salla's app-subscription endpoint. The exact
+   URL needs confirming against current partner docs — an endpoint copied from
+   memory and wrong is a reconciler that fails silently every night, which is
+   the failure this whole thing exists to prevent.
+2. **Credentials lookup** keyed by our store id, reading `platform_credentials`
+   (which already handles the encrypted blob, key rotation, and
+   `reauth_required_at` so a dead token is not retried into a rate-limit ban).
+   This lives on our side of the port on purpose: the adapter cannot resolve our
+   identifiers.
+3. **A plan map**, `platform plan id → PlanCode`, inside the adapter. Unmapped
+   ids send `planCode: null`, which means "did not say" and preserves the last
+   good plan rather than writing a code no build can resolve.

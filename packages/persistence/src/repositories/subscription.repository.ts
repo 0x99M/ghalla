@@ -137,6 +137,21 @@ export class SubscriptionRepository {
       .where(eq(storeSubscription.storeId, storeId));
   }
 
+  /**
+   * Puts a store at the head of the reconciler's queue.
+   *
+   * Clearing `last_reconciled_at` rather than adding a "please check me" flag:
+   * the sweep already orders NULLS FIRST, so this reuses the ordering that
+   * exists instead of inventing a second one that could disagree with it. It
+   * also means a refresh request survives a restart — the row is the queue.
+   */
+  async markDueForReconciliation(storeId: StoreId): Promise<void> {
+    await this.db
+      .update(storeSubscription)
+      .set({ lastReconciledAt: null })
+      .where(eq(storeSubscription.storeId, storeId));
+  }
+
   /** Store counts by status, for the observability surface. */
   async countByStatus(): Promise<Readonly<Record<string, number>>> {
     const rows = await this.db
