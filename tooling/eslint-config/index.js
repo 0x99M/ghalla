@@ -270,7 +270,9 @@ export default tseslint.config(
     // off for TypeScript, where the compiler already knows), so the handful of
     // runtime globals they use have to be declared.
     files: ['**/*.mjs'],
-    languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
+    languageOptions: {
+      globals: { console: 'readonly', process: 'readonly', URL: 'readonly', URLSearchParams: 'readonly' },
+    },
   },
 
   // Tests and config files are not architectural elements. Note that the pure

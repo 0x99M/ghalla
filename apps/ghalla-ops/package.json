@@ -13,7 +13,8 @@
     "clean": "rm -rf .next",
     "migrate:deploy": "node scripts/migrate.mjs",
     "db:generate": "drizzle-kit generate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "provision": "node scripts/provision.mjs"
   },
   "dependencies": {
     "@ghalla/billing": "workspace:*",
