@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 // Provisions everything the portal needs from a database it does not own.
 //
-// Two steps, both idempotent, both safe to re-run:
+// Three steps, all idempotent, all safe to re-run:
 //
 //   1. CREATE DATABASE for the portal's own tables.
+//   1b. Create a NON-SUPERUSER owner for it, so the portal's own connection
+//      string carries no cluster-wide privilege.
 //   2. Run sql/ghalla_ops_ro.sql against an integration database, creating the
 //      read-only role the portal connects as.
 //
@@ -19,7 +21,11 @@
 //
 //   ADMIN_DATABASE_URL=postgresql://postgres:...@host:5432/railway \
 //   OPS_RO_PASSWORD=$(openssl rand -hex 20) \
+//   PORTAL_OWNER_PASSWORD=$(openssl rand -hex 20) \
 //   node apps/ghalla-ops/scripts/provision.mjs
+//
+// It prints the two connection strings to set on the ops service. Neither of
+// them is the superuser's.
 //
 // PORTAL_DATABASE_NAME defaults to ghalla_ops.
 import fs from 'node:fs';
@@ -108,6 +114,75 @@ await withClient('postgres', async (client) => {
   console.log(`created database ${portalDbName}`);
 });
 
+// -- 1b. an owner for the portal database that is NOT the superuser ---------
+//
+// Without this the portal runs holding the cluster SUPERUSER's credential,
+// because a managed Postgres hands you exactly one role and every connection
+// string is built from it. The read-only role then bounds what the portal READS
+// WITH, while the process itself holds a credential that reaches the
+// integration database by changing one field of a URL - the dbname. That makes
+// "the portal cannot write to an integration database" false at the process
+// level, which is the opposite of what this design claims.
+//
+// So the portal database gets its own login role, owns its own schema, and the
+// superuser credential never enters the ops service's environment at all.
+const ownerPassword = process.env.PORTAL_OWNER_PASSWORD;
+if (!ownerPassword) {
+  console.error('PORTAL_OWNER_PASSWORD is not set - the portal must not run as the cluster superuser');
+  process.exit(1);
+}
+if (!/^[A-Za-z0-9_-]{24,}$/.test(ownerPassword)) {
+  console.error('PORTAL_OWNER_PASSWORD must be at least 24 URL-safe characters ([A-Za-z0-9_-])');
+  process.exit(1);
+}
+
+const OWNER_ROLE = 'ghalla_ops_app';
+
+await withClient('postgres', async (client) => {
+  const exists = await client.query('select 1 from pg_roles where rolname = $1', [OWNER_ROLE]);
+  if (exists.rowCount === 0) await client.query(`CREATE ROLE ${OWNER_ROLE} LOGIN`);
+  // Inlined rather than parameterised because ALTER ROLE ... PASSWORD takes no
+  // parameter. Safe for the same reason as the read-only password: asserted
+  // URL-safe above, so there is nothing to escape.
+  await client.query(`ALTER ROLE ${OWNER_ROLE} WITH LOGIN PASSWORD '${ownerPassword}' CONNECTION LIMIT 10`);
+  await client.query(`ALTER DATABASE ${portalDbName} OWNER TO ${OWNER_ROLE}`);
+  // PUBLIC holds CONNECT and TEMP on a freshly created database. TEMP is a
+  // WRITE capability and it survives default_transaction_read_only, so it is
+  // the one write every role on this cluster could otherwise perform against
+  // the portal's database. Nothing legitimate needs it.
+  await client.query(`REVOKE TEMP, CONNECT ON DATABASE ${portalDbName} FROM PUBLIC`);
+  await client.query(`GRANT ALL ON DATABASE ${portalDbName} TO ${OWNER_ROLE}`);
+  console.log(`role ${OWNER_ROLE} owns database ${portalDbName}; PUBLIC revoked`);
+});
+
+// Objects created before the owner role existed still belong to whoever ran the
+// migration. Reassigned explicitly, table by table, rather than with REASSIGN
+// OWNED - which acts on everything the old owner holds in the database and is a
+// blunt instrument to reach for while connected as a superuser.
+await withClient(portalDbName, async (client) => {
+  await client.query(`ALTER SCHEMA public OWNER TO ${OWNER_ROLE}`);
+  const tables = await client.query(
+    "select tablename from pg_tables where schemaname = 'public' and tableowner <> $1",
+    [OWNER_ROLE],
+  );
+  for (const { tablename } of tables.rows) {
+    await client.query(`ALTER TABLE public."${tablename}" OWNER TO ${OWNER_ROLE}`);
+  }
+  const drizzleSchema = await client.query("select 1 from pg_namespace where nspname = 'drizzle'");
+  if (drizzleSchema.rowCount > 0) {
+    await client.query(`ALTER SCHEMA drizzle OWNER TO ${OWNER_ROLE}`);
+    const journal = await client.query(
+      "select tablename from pg_tables where schemaname = 'drizzle' and tableowner <> $1",
+      [OWNER_ROLE],
+    );
+    for (const { tablename } of journal.rows) {
+      await client.query(`ALTER TABLE drizzle."${tablename}" OWNER TO ${OWNER_ROLE}`);
+    }
+  }
+  console.log(`reassigned ${String(tables.rowCount)} public table(s) to ${OWNER_ROLE}`);
+});
+
+
 // ── 2. the read-only role, in the integration database ─────────────────────
 const raw = fs.readFileSync(sqlPath, 'utf8');
 
@@ -192,4 +267,13 @@ try {
   await asRole.end();
 }
 
-console.log('\nprovisioning complete.');
+const portalUrl = new URL(base.toString());
+portalUrl.username = OWNER_ROLE;
+portalUrl.password = ownerPassword;
+portalUrl.pathname = `/${portalDbName}`;
+
+console.log('\nprovisioning complete. Set these on the ops service:');
+console.log(`  PORTAL_DATABASE_URL = ${portalUrl.toString()}`);
+console.log(`  DATABASE_URL_<PLATFORM> = ${roleUrl.toString()}`);
+console.log('\nNeither is the cluster superuser. Replace the host with the private');
+console.log('domain if the service runs inside the same network.');
