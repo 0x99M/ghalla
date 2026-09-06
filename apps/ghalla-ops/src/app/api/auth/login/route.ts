@@ -17,7 +17,23 @@ export const dynamic = 'force-dynamic';
  *
  * No client JavaScript anywhere in the login path: the one screen that must
  * work when everything else is broken should not depend on a bundle loading.
+ *
+ * Every `Location` here is RELATIVE, and that is load bearing rather than
+ * stylistic. Inside a route handler `request.url` is the address the Node
+ * server is listening on, not the address the browser asked for — behind
+ * Railway's proxy it is `https://localhost:8080/...`. Resolving a redirect
+ * against it sends a successfully authenticated operator to localhost, which
+ * fails in the browser while every log line says the login worked. A relative
+ * Location is resolved by the client against the URL it actually requested, so
+ * there is no host to get wrong. RFC 7231 s7.1.2 permits it.
  */
+
+/** 303 with a relative Location. See the note above on why it is never absolute. */
+function seeOther(location: string, cookie?: string): Response {
+  const response = new Response(null, { status: 303, headers: { Location: location } });
+  if (cookie !== undefined) response.headers.append('Set-Cookie', cookie);
+  return response;
+}
 export async function POST(request: Request): Promise<Response> {
   const { accessKey, sessionTtlMs } = getAuthConfig();
   const limiter = getLoginLimiter();
@@ -30,19 +46,13 @@ export async function POST(request: Request): Promise<Response> {
 
   const allowed = checkLogin(limiter, source, now);
   if (!allowed.allowed) {
-    return Response.redirect(
-      new URL(`/login?error=throttled&next=${encodeURIComponent(next)}`, request.url),
-      303,
-    );
+    return seeOther(`/login?error=throttled&next=${encodeURIComponent(next)}`);
   }
 
   const presented = String(form.get('key') ?? '');
   if (!(await accessKeyMatches(presented, accessKey))) {
     recordLoginFailure(limiter, source, now);
-    return Response.redirect(
-      new URL(`/login?error=invalid&next=${encodeURIComponent(next)}`, request.url),
-      303,
-    );
+    return seeOther(`/login?error=invalid&next=${encodeURIComponent(next)}`);
   }
 
   recordLoginSuccess(limiter, source);
@@ -52,12 +62,12 @@ export async function POST(request: Request): Promise<Response> {
   });
   const attributes = cookieAttributes(sessionTtlMs, secure);
 
-  const response = new Response(null, { status: 303, headers: { Location: new URL(next, request.url).toString() } });
-  response.headers.append(
-    'Set-Cookie',
+  // `next` has already been through `safeNext`, so it is a same-origin path
+  // beginning with `/` and can be used as a relative Location as it stands.
+  return seeOther(
+    next,
     `${SESSION_COOKIE}=${token}; Path=${attributes.path}; Max-Age=${String(attributes.maxAge)}; HttpOnly; SameSite=Lax${
       attributes.secure ? '; Secure' : ''
     }`,
   );
-  return response;
 }
