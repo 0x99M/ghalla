@@ -1,0 +1,45 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "//": [
+    "The OPS PORTAL's Railway config. The service must point its",
+    "`railwayConfigFile` setting at this path, or it silently inherits the",
+    "repo-root railway.json — which belongs to the Salla API and would do two",
+    "wrong things at once: run the INTEGRATION migrations against whatever",
+    "DATABASE_URL happens to be set, and health-check /api/v1/health, a path this",
+    "service does not serve. The deploy would fail, and the failure would look",
+    "like a broken app rather than a misrouted config.",
+    "",
+    "Railpack decides install/build/start before this file is applied, so those",
+    "commands live on the service as RAILPACK_BUILD_CMD and RAILPACK_START_CMD,",
+    "matching ghalla-salla-api."
+  ],
+  "build": {
+    "builder": "RAILPACK"
+  },
+  "deploy": {
+    "//preDeployCommand": [
+      "The PORTAL's own migrations, against PORTAL_DATABASE_URL and nothing else.",
+      "This service holds a connection string for every integration database at",
+      "the same time, and every one of those is a database it is forbidden to",
+      "write to — so the runner reads its own variable rather than DATABASE_URL.",
+      "",
+      "Invoked as a plain node path rather than through `pnpm run migrate:deploy`,",
+      "for the reason the API's config gives: a `pnpm --filter` that matches",
+      "nothing exits ZERO on some versions, which would skip the migration and",
+      "let the deploy go green against an unmigrated database. node either runs",
+      "the file or fails loudly."
+    ],
+    "preDeployCommand": "node apps/ghalla-ops/scripts/migrate.mjs",
+    "//healthcheckPath": [
+      "/api/live is the ONLY unauthenticated route the middleware allows through",
+      "besides the login form — see PUBLIC_PATHS in src/lib/auth/guard.ts. Any",
+      "other path answers 401 to an unauthenticated caller, and Railway's health",
+      "check is unauthenticated, so every deploy would fail its check while the",
+      "service was working perfectly."
+    ],
+    "healthcheckPath": "/api/live",
+    "healthcheckTimeout": 180,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 5
+  }
+}

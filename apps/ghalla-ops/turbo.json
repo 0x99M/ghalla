@@ -1,0 +1,23 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+
+  // This app's build output is `.next/`, not `dist/`.
+  //
+  // The root task declares `outputs: ["dist/**"]`, which is right for every
+  // other package here and silently wrong for this one: turbo would record a
+  // successful build with NO artifacts, and the next cache hit would restore
+  // nothing while still reporting the task complete. On Railway that is a
+  // deploy that builds green and then cannot start, because `next start` has no
+  // `.next` to serve — the failure surfaces at runtime, one step from its cause.
+  //
+  // `.next/cache` is excluded because it is Next's own incremental cache. It is
+  // large, it is not an artifact, and caching a cache is how a turbo entry grows
+  // without bound.
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    }
+  }
+}
