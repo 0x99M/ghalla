@@ -1,30 +1,26 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from './sidebar';
 import type { SidebarCounts } from './sidebar';
 import { TopBar } from './topbar';
+import { JumpDialog } from './jump-dialog';
 import { ScreenStateProvider } from './page-meta';
 
 /**
- * The client half of the shell, and the only place the console binds a key.
+ * The client half of the shell.
  *
- * ⌘K and Ctrl+K are bound here rather than inside the palette, because a
- * listener that only exists while the palette is mounted cannot be the thing
- * that mounts it.
+ * Owns the one piece of shell state that is not in the URL: whether the
+ * "Jump to store" dialog is open. It is opened from the sidebar card and from
+ * nowhere else — no key is bound to it, by decision. The handoff's ⌘K was a
+ * shortcut to a card that is always on screen, and in Firefox the same chord
+ * is focus-the-search-bar; a control with one obvious way in is easier to
+ * trust than one with two.
  *
- * INTERIM: the key and the sidebar's "Jump to store" card both navigate to the
- * store list instead of opening the palette. The palette searches stores by
- * NAME, and no name exists anywhere in the schema — see the handoff notes. It
- * lands with the Stores screen once that is resolved; sending the operator to
- * the list they were trying to search is the closest true behaviour in the
- * meantime, and it is better than a control that opens nothing.
- *
- * `preventDefault` on ⌘K is deliberate: in Firefox it is focus-the-search-bar,
- * and an operator who half-remembers which app they are in should get the same
- * behaviour either way rather than being thrown into the browser chrome.
+ * Navigation on pick is a `router.push` to the store's own URL, so the jump is
+ * an ordinary page load of the same detail screen a table row links to.
  */
 export function ConsoleChrome({
   counts,
@@ -34,33 +30,30 @@ export function ConsoleChrome({
   readonly children: ReactNode;
 }) {
   const router = useRouter();
+  const [jumpOpen, setJumpOpen] = useState(false);
 
-  const jumpToStore = useCallback(() => {
-    router.push('/stores');
-  }, [router]);
+  const openJump = useCallback(() => {
+    setJumpOpen(true);
+  }, []);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent): void => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        router.push('/stores');
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [router]);
+  const pick = useCallback(
+    (href: string) => {
+      setJumpOpen(false);
+      router.push(href);
+    },
+    [router],
+  );
 
   return (
     <ScreenStateProvider>
       <div className="flex min-h-screen bg-ground text-ink">
-        <Sidebar counts={counts} onOpenPalette={jumpToStore} />
+        <Sidebar counts={counts} onJump={openJump} />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar />
           <main className="flex flex-col gap-[14px] px-5 pt-4 pb-[26px]">{children}</main>
         </div>
       </div>
+      <JumpDialog open={jumpOpen} onOpenChange={setJumpOpen} onPick={pick} />
     </ScreenStateProvider>
   );
 }

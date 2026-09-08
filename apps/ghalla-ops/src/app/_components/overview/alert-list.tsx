@@ -4,6 +4,7 @@ import type { AlertFeed } from '../../../lib/queries/alert-feed';
 import type { Alert } from '../../../lib/queries/alerts';
 import { alertPresentation } from '../../../lib/ui/presentation';
 import { cn } from '../../../lib/ui/cn';
+import { storeHref } from '../../../lib/ui/nav';
 import { Card, CardHeader, Chip } from '../ui/primitives';
 import { AllClear, Unavailable } from '../ui/states';
 import { TimeStamp } from '../ui/stamp';
@@ -34,7 +35,7 @@ const TILE: Readonly<Record<string, string>> = {
 
 function AlertRow({ alert, now }: { readonly alert: Alert; readonly now: Date }) {
   const look = alertPresentation(alert);
-  const href = alert.storeId === null ? '/health' : `/stores/${alert.platform}/${encodeURIComponent(alert.storeId)}`;
+  const href = alert.storeId === null ? '/health' : storeHref(alert.platform, alert.storeId);
 
   return (
     <Link

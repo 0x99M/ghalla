@@ -3,6 +3,7 @@ import type { PlatformStore } from '../../../lib/queries/stores';
 import { storePresentation } from '../../../lib/ui/presentation';
 import { NO_VALUE, bpsToPercent, clampBarWidth, count } from '../../../lib/ui/format';
 import { cn } from '../../../lib/ui/cn';
+import { storeHref } from '../../../lib/ui/nav';
 import { Chip, StatusDot } from '../ui/primitives';
 import { TimeStamp } from '../ui/stamp';
 
@@ -93,7 +94,7 @@ export function StoreTable({
                         open-in-new-tab keep working, which a router.push row
                         would silently break. */}
                     <Link
-                      href={`/stores/${store.platform}/${encodeURIComponent(store.storeId)}`}
+                      href={storeHref(store.platform, store.storeId)}
                       className="font-mono font-medium after:absolute after:inset-0 after:content-[''] hover:underline"
                     >
                       {store.platformStoreId}

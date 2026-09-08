@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { cn } from '../../../lib/ui/cn';
+import { storeHref } from '../../../lib/ui/nav';
 
 /**
  * How a store is named on screen.
@@ -38,7 +39,7 @@ export function StoreRef({
 
   return (
     <Link
-      href={`/stores/${platform}/${encodeURIComponent(storeId)}`}
+      href={storeHref(platform, storeId)}
       className={cn('block min-w-0 hover:underline', className)}
     >
       {body}

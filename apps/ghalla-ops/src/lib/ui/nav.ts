@@ -112,3 +112,14 @@ export function screenMeta(pathname: string): ScreenMeta {
   }
   return OVERVIEW_SCREEN;
 }
+
+/**
+ * The store detail URL, built in one place.
+ *
+ * Four components linked to a store and three of them built the path inline.
+ * `storeId` is percent-encoded because it is platform-issued and may carry a
+ * colon or a slash; `platform` is a slug from `GHALLA_PLATFORMS` and is not.
+ */
+export function storeHref(platform: string, storeId: string): string {
+  return `/stores/${platform}/${encodeURIComponent(storeId)}`;
+}

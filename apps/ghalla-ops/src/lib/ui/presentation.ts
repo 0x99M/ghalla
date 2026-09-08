@@ -460,10 +460,18 @@ export function applyStoreView(
  * Case-insensitive and a plain substring rather than a fuzzy match: an operator
  * pasting an id from a log wants that row, not the seven rows near it.
  */
-export function filterByIdentifier(
-  stores: readonly PlatformStore[],
-  query: string,
-): readonly PlatformStore[] {
+/**
+ * The three identifiers a store can be found by. Structural and unbranded —
+ * `platform` is a plain string here because this is also the shape a row has
+ * after a round trip through `/api/stores` as JSON, where no brand survives.
+ */
+export interface StoreIdentity {
+  readonly platform: string;
+  readonly platformStoreId: string;
+  readonly storeId: string;
+}
+
+export function filterByIdentifier<T extends StoreIdentity>(stores: readonly T[], query: string): readonly T[] {
   const needle = query.trim().toLowerCase();
   if (needle === '') return stores;
   return stores.filter(

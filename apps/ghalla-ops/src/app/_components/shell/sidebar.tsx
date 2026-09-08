@@ -44,10 +44,10 @@ function trailing(item: NavItem, counts: SidebarCounts): { kind: 'count' | 'badg
 
 export function Sidebar({
   counts,
-  onOpenPalette,
+  onJump,
 }: {
   readonly counts: SidebarCounts;
-  readonly onOpenPalette: () => void;
+  readonly onJump: () => void;
 }) {
   const pathname = usePathname();
 
@@ -98,18 +98,16 @@ export function Sidebar({
       </div>
 
       <div className="mt-auto flex flex-col gap-[10px]">
+        {/* Opens the jump dialog. A button and nothing else: no key is bound to
+            it, by decision — the card is always on screen, one click away. */}
         <button
           type="button"
-          onClick={onOpenPalette}
-          aria-keyshortcuts="Meta+K Control+K"
+          onClick={onJump}
           className="cursor-pointer rounded-card border border-shell bg-shell px-[11px] py-[10px] text-left transition-colors hover:border-ink"
         >
           <span className="flex items-center gap-[7px] text-cell font-semibold text-muted">
             <Search size={13} strokeWidth={2} aria-hidden className="text-faint" />
             Jump to store
-            <kbd className="ml-auto rounded-chip bg-shell px-[5px] py-[2px] font-mono text-chip font-semibold text-ink">
-              ⌘K
-            </kbd>
           </span>
         </button>
 

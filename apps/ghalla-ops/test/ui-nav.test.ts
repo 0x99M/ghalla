@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NAV_GROUPS, NAV_ITEMS, OVERVIEW_SCREEN, isActive, screenMeta } from '../src/lib/ui/nav';
+import { NAV_GROUPS, NAV_ITEMS, OVERVIEW_SCREEN, isActive, screenMeta, storeHref } from '../src/lib/ui/nav';
 
 describe('isActive', () => {
   it('lights Overview only on the root', () => {
@@ -50,5 +50,12 @@ describe('NAV_ITEMS', () => {
 
   it('has no duplicate hrefs', () => {
     expect(new Set(NAV_ITEMS.map((item) => item.href)).size).toBe(NAV_ITEMS.length);
+  });
+});
+
+describe('storeHref', () => {
+  it('encodes the platform-issued id and leaves the platform slug alone', () => {
+    expect(storeHref('salla', 'salla:99')).toBe('/stores/salla/salla%3A99');
+    expect(storeHref('zid', 'a/b')).toBe('/stores/zid/a%2Fb');
   });
 });

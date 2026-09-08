@@ -553,8 +553,11 @@ revenue", and the truth is "no history yet".
   gives the name. `name` is on the PII deny-list, so the field wants to be
   `storeName` — the precedent `CanonicalOrderItem.productName` already set.
   One component, `StoreRef`, is the only place this is rendered.
-- **⌘K palette.** Deferred: it searches by a name that does not exist. The key
-  and the sidebar card navigate to the store list meanwhile.
+- **Jump to store is a dialog, not a ⌘K palette.** The sidebar card opens a
+  search over the identifiers we have, through the same `filterByIdentifier` the
+  Stores screen uses; exact ids rank first, then prefixes (`lib/ui/jump`). No
+  key is bound to it, by decision: the card is always on screen. It reads
+  `/api/stores` when opened, never before, so nothing refreshes on its own.
 - **Health nav badge.** The handoff shows `3` with no definition behind it. It
   counts unacknowledged alerts, the only alert count this model defines.
 - **Muted text** is `#5A6070`, the README's stated 4.5:1 floor, not the
