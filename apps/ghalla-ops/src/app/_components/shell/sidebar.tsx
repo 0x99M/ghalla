@@ -7,6 +7,7 @@ import { NAV_GROUPS, NAV_ITEMS, isActive } from '../../../lib/ui/nav';
 import type { NavItem } from '../../../lib/ui/nav';
 import { count } from '../../../lib/ui/format';
 import { cn } from '../../../lib/ui/cn';
+import { Brand } from './brand';
 import { NavGlyph } from './nav-icon';
 
 /**
@@ -55,14 +56,8 @@ export function Sidebar({
       aria-label="Console"
       className="flex w-sidebar shrink-0 flex-col border-r border-shell bg-rail px-[14px] py-[18px]"
     >
-      <div className="flex items-center gap-[9px] border-b border-shell px-1 pb-4">
-        <div className="flex size-[30px] items-center justify-center rounded-pill bg-ink text-title font-extrabold text-rail">
-          G
-        </div>
-        <div>
-          <div className="text-section-lg font-extrabold tracking-[-0.01em]">GHALLA</div>
-          <div className="mt-[3px] text-kicker font-bold tracking-brand text-muted">OPS CONSOLE</div>
-        </div>
+      <div className="border-b border-shell px-1 pb-4">
+        <Brand />
       </div>
 
       <div className="flex flex-col gap-[2px] pt-[10px]">
