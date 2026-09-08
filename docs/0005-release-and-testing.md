@@ -163,6 +163,36 @@ Both places now carry the command, which costs nothing and removes the ambiguity
 counts tables afterwards regardless, because the migration hook and the belief that it ran are
 different things.
 
+### Hostnames
+
+Both staging services answer on the `0x99m.com` zone as well as on their Railway-provided domains:
+
+| Service | Hostname | Railway-provided domain |
+|---|---|---|
+| `ghalla-salla-api` | `https://ghalla-api-staging.0x99m.com` | `ghalla-salla-api-staging.up.railway.app` |
+| `ghalla-ops` | `https://ghalla-ops-staging.0x99m.com` | `ghalla-ops-staging.up.railway.app` |
+
+DNS lives in Cloudflare. Each hostname is two records: a **proxied** `CNAME` to the per-domain
+target Railway hands out when the custom domain is added (not the service's `*.up.railway.app`
+domain — a different, dedicated one), and a `_railway-verify.<hostname>` `TXT` record carrying
+Railway's ownership token. Railway will not route the hostname without the `TXT`; a `CNAME` alone
+resolves and then answers `404`.
+
+Three things about the Cloudflare proxy that are easy to misread:
+
+- The zone's SSL mode must stay **Full**. `Flexible` sends plain http to Railway's edge, which
+  redirects to https, which Cloudflare fetches as plain http again — a redirect loop.
+- Railway's dashboard shows the `CNAME` as *requires update* forever, with no current value. A
+  proxied record is flattened to Cloudflare's own addresses, so Railway cannot see the `CNAME` it
+  asked for. *Verified: yes* and *Certificate: valid* are the real signal, and Railway reports
+  *Cloudflare detected* alongside them.
+- The `*.up.railway.app` domains still exist and bypass Cloudflare entirely. Anything that keys on
+  the caller's address — the login limiter's advisory tier — sees Cloudflare's addresses on one
+  path and the client's on the other. That is why the tier is advisory.
+
+When the Salla adapter is registered with Salla, the callback and webhook URLs are the `0x99m.com`
+hostname. Railway-provided domains are for Railway, not for anything that has to stay stable.
+
 ## Runbook
 
 | Situation | Command |
