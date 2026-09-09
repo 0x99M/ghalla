@@ -10,7 +10,8 @@ import { SESSION_COOKIE } from './lib/auth/session';
  * A middleware rather than a per-route guard on purpose: a per-route check
  * protects the routes somebody remembered to decorate, and the failure mode of
  * forgetting one is an unprotected page nobody notices. Here the default is
- * closed and the exceptions are a list of three paths in `guard.ts`.
+ * closed and the exceptions are a list of three paths, and the directory of
+ * brand files the login page shows, in `guard.ts`.
  *
  * The decisions live in `lib/auth/gate.ts` and are tested there; this file is
  * the adapter between them and Next. If `OPS_ACCESS_KEY` is missing or too

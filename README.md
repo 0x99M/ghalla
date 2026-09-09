@@ -51,6 +51,7 @@ apps/            one service per platform (none yet)
 tooling/
   tsconfig/      shared compiler presets: base, library, app
   eslint-config/ the boundary rules
+brand/           the identity kit, verbatim — mark, icons, lockups. The console serves copies a test holds byte-equal to it
 ```
 
 ## Status

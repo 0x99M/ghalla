@@ -1,10 +1,23 @@
-import { IBM_Plex_Mono, Montserrat } from 'next/font/google';
+import type { Metadata } from 'next';
+import { IBM_Plex_Mono, Montserrat, Poppins } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { BRAND_ASSETS } from '../lib/ui/brand';
 import './globals.css';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Ghalla Ops',
   description: 'Internal operator portal',
+  // The kit's own web snippet, in its order: the raster favicon first for the
+  // browsers that ignore an SVG one, then the scalable icon, then the icon iOS
+  // asks for on a home screen. All three are served from `public/brand/`,
+  // where a test holds them byte-equal to the kit.
+  icons: {
+    icon: [
+      { url: BRAND_ASSETS.favicon.href, sizes: '32x32', type: 'image/png' },
+      { url: BRAND_ASSETS.icon.href, type: 'image/svg+xml' },
+    ],
+    apple: [{ url: BRAND_ASSETS.appleTouch.href, sizes: '180x180' }],
+  },
 };
 
 /**
@@ -32,6 +45,17 @@ const plexMono = IBM_Plex_Mono({
 });
 
 /**
+ * The wordmark's face. One weight, because the kit specifies one — Poppins
+ * SemiBold — and the wordmark is the only thing on the console set in it.
+ */
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['600'],
+  variable: '--font-poppins',
+  display: 'swap',
+});
+
+/**
  * Deliberately NOT the console shell.
  *
  * `/login` renders through this layout too, and it must not show a sidebar full
@@ -40,7 +64,7 @@ const plexMono = IBM_Plex_Mono({
  */
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${plexMono.variable}`}>
+    <html lang="en" className={`${montserrat.variable} ${plexMono.variable} ${poppins.variable}`}>
       <body>{children}</body>
     </html>
   );

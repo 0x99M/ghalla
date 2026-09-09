@@ -95,7 +95,9 @@ One operator, one key, and no identity.
   open session.
 - Middleware protects **everything** including `/api`. Three paths are open:
   `/login`, `/api/auth/login`, and `/api/live` (Railway's health check, which
-  answers with a status word and a timestamp and nothing else).
+  answers with a status word and a timestamp and nothing else) — plus the files
+  under `/brand/`, which are the login page's own logo and the favicon: static
+  copies of the identity kit, holding no data, and the login page is open.
 - Sessions are 8 hours, absolute, never extended.
 - Failed logins are limited per source (5 in 15 minutes) and globally (20),
   each with a one-minute block. The global tier exists because one shared

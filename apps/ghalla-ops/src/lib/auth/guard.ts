@@ -19,8 +19,19 @@ export const LOGIN_PATH = '/login';
  */
 export const PUBLIC_PATHS: readonly string[] = [LOGIN_PATH, '/api/auth/login', '/api/live'];
 
+/**
+ * The one directory of files reachable without a session: the identity kit's
+ * copies under `public/brand/`, which are the login page's own logo and the
+ * favicon. The login page is open, so what it is made of has to be — and these
+ * are static copies of a logo, holding no data. `test/ui-brand.test.ts` keeps
+ * the directory to exactly the files `lib/ui/brand` declares.
+ *
+ * With the trailing slash, so `/brand` itself and `/brandish` stay closed.
+ */
+export const BRAND_FILES_PREFIX = '/brand/';
+
 export function isPublicPath(pathname: string): boolean {
-  return PUBLIC_PATHS.includes(pathname);
+  return PUBLIC_PATHS.includes(pathname) || pathname.startsWith(BRAND_FILES_PREFIX);
 }
 
 export type GuardOutcome =

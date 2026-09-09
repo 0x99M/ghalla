@@ -36,6 +36,11 @@ describe('guard', () => {
     expect(isPublicPath('/')).toBe(false);
   });
 
+  it('and the brand files, which the open login page is made of', () => {
+    expect(isPublicPath('/brand/mark-ink.svg')).toBe(true);
+    expect(guard('/brand/favicon-32.png', '', false)).toEqual({ kind: 'allow' });
+  });
+
   it('protects a route nobody has written yet, because the default is closed', () => {
     expect(guard('/some/page/added/next/month', '', false).kind).toBe('redirect');
     expect(guard('/api/route/added/next/month', '', false).kind).toBe('unauthorized');
@@ -44,6 +49,9 @@ describe('guard', () => {
   it('does not treat a path that merely starts with a public one as public', () => {
     expect(isPublicPath('/login-secrets')).toBe(false);
     expect(isPublicPath('/api/live/detail')).toBe(false);
+    // The brand rule is a prefix, and the prefix carries its slash.
+    expect(isPublicPath('/brand')).toBe(false);
+    expect(isPublicPath('/brandish/anything')).toBe(false);
   });
 });
 

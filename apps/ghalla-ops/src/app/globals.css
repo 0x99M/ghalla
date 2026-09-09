@@ -89,6 +89,12 @@
    */
   --font-sans: var(--font-montserrat), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, 'SF Mono', monospace;
+  /*
+   * The wordmark's face, from the kit at `brand/`: Poppins SemiBold, and only
+   * that weight, because the wordmark is the only thing set in it. The
+   * fallback stack is the one the kit's own lockup SVG declares.
+   */
+  --font-brand: var(--font-poppins), 'Helvetica Neue', Arial, sans-serif;
 
   /*
    * The scale, with its half-pixel steps intact.
@@ -130,6 +136,8 @@
   --text-hero--line-height: 1;
   --text-hero-lg: 34px;
   --text-hero-lg--line-height: 1;
+  --text-wordmark: 16px; /* "Ghalla" beside the mark, in the brand face at 600 */
+  --text-wordmark--line-height: 1;
 
   --tracking-chip: 0.07em;
   --tracking-caps: 0.09em;
@@ -137,6 +145,8 @@
   --tracking-brand: 0.16em;
   --tracking-figure: -0.02em;
   --tracking-figure-tight: -0.03em;
+  /* The kit's letter-spacing for the wordmark. It is never opened up. */
+  --tracking-wordmark: -0.035em;
 
   /* ----------------------------------------------------------- shape --- */
   --radius-chip: 5px;

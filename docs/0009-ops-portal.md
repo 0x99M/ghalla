@@ -510,6 +510,20 @@ the CDN; on this console that is a render-blocking third-party request in front
 of an incident screen, and a font that fails to arrive re-measures every column
 in a layout whose whole argument is that figures line up.
 
+The identity comes from the kit at `brand/` in the repository root, verbatim.
+The console serves four of its files — the mark, the app icon, the raster
+favicon and the home-screen icon — as byte-for-byte copies under
+`public/brand/`, each listed in `lib/ui/brand` with the kit file it copies.
+`test/ui-brand.test.ts` fails if a copy and its source ever differ, or if a
+file appears under `public/brand/` that the kit did not supply, and the
+console's turbo `test` task lists `brand/**` as an input so a kit edit alone
+cannot hit the cache. The mark is never redrawn as markup: a logo drawn twice
+drifts. It renders at 28px, the size at which its 24-on-30 grid lands on whole
+pixels, with the kit's one-cell clear space beside it. The wordmark is live
+text in Poppins SemiBold, the kit's face, self-hosted like the other two —
+the lockup SVG carries live `<text>` that an image cannot load a web font for
+— and it is sentence case, because the kit forbids capitals for it.
+
 ### Fixtures
 
 `OPS_DATA_SOURCE=fixtures` switches the whole console, read only inside

@@ -18,6 +18,15 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**"]
+    },
+    // The brand test reads `brand/` at the repository root, outside this
+    // package, and compares the served copies against it. Without the second
+    // input a kit edit on its own would hit the cache, and the one test that
+    // exists to catch that edit would report a pass it never ran.
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/brand/**"],
+      "outputs": []
     }
   }
 }
